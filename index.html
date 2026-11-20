@@ -127,7 +127,7 @@ body{font-family:var(--sans);color:var(--ink);background:var(--abyss);font-size:
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .field{display:flex;flex-direction:column;gap:3px}
 .field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-mute);font-weight:600}
-select,input[type=text],input[type=number],textarea{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--work);border:1px solid var(--work-line);border-radius:8px;padding:7px 10px;outline:none}
+select,input[type=text],input[type=number],input[type=email],input[type=tel],textarea{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--work);border:1px solid var(--work-line);border-radius:8px;padding:7px 10px;outline:none}
 select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 .btn{font-family:var(--sans);font-size:13px;font-weight:600;border-radius:8px;padding:8px 13px;cursor:pointer;border:1px solid transparent;background:var(--work);color:var(--ink);border-color:var(--work-line)}
 .btn:hover{background:var(--work-alt)}
@@ -383,7 +383,7 @@ tbody tr:hover{background:var(--work-alt)}
 .gstep.cierre{border-color:#3A5A2E;background:#12200E}
 .gstep.cierre .g-preg{color:#A6E27F;font-weight:600;font-style:normal}
 .kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;color:#AEB9C7}
-@media print{#guion-fab,#lev-fab,#guion-panel{display:none!important}}
+@media print{#guion-fab,#lev-fab,#guion-panel,#appbar,#portada{display:none!important}}
 
 /* ---- Inducción ---- */
 .ind-hero{background:var(--night);color:#E4EAF1;border-radius:14px;padding:22px 24px;margin-bottom:18px;background-image:linear-gradient(rgba(66,165,245,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(66,165,245,.06) 1px,transparent 1px);background-size:26px 26px}
@@ -429,6 +429,47 @@ details.faq .faq-a b{color:var(--ink)}
 .no-result{padding:26px;text-align:center;color:var(--ink-mute);font-size:13px}
 @media(max-width:1180px){.concept-grid{grid-template-columns:1fr}.glos{grid-template-columns:1fr}}
 
+/* ---- Portada (branding ALTKimia: patrón de puntos del manual sobre Abyss) ---- */
+#portada{position:fixed;top:26px;left:0;right:0;bottom:0;z-index:1600;background:var(--abyss);display:flex;flex-direction:column;overflow-y:auto;
+  background-image:radial-gradient(circle,rgba(33,150,243,.14) 1px,transparent 1px);background-size:38px 38px}
+.pt-wrap{margin:auto;max-width:1060px;width:100%;padding:48px 28px 28px;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
+.pt-brandrow{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+.pt-brandrow svg{width:42px;height:42px;flex:none}
+.pt-wordmark{font-family:var(--title);font-size:22px;font-weight:800;letter-spacing:-.5px;color:#fff}
+.pt-wordmark span{color:var(--blue)}
+.pt-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(33,150,243,.12);color:var(--blue-light);border:1px solid rgba(33,150,243,.35);border-radius:20px;padding:4px 14px;font-family:var(--mono);font-size:10.5px;letter-spacing:2px;text-transform:uppercase;margin-bottom:18px}
+.pt-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.pt-title{font-family:var(--title);font-size:44px;font-weight:800;letter-spacing:-1.2px;line-height:1.08;color:#fff;margin-bottom:16px}
+.pt-title span{color:var(--blue)}
+.pt-sub{font-size:15px;color:#AEB9C7;line-height:1.7;max-width:470px;margin-bottom:26px}
+.pt-ctas{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pt-btn{font-family:var(--sans);font-size:14px;font-weight:600;border-radius:8px;padding:12px 20px;cursor:pointer;border:1px solid transparent}
+.pt-btn-primary{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark)}
+.pt-btn-primary:hover{background:var(--blue)}
+.pt-btn-ghost{background:transparent;color:#F0F4FF;border-color:var(--border-soft)}
+.pt-btn-ghost:hover{border-color:var(--blue);color:#fff}
+.pt-note{font-family:var(--mono);font-size:10.5px;color:#8B9DC3}
+.pt-foot{text-align:center;padding:14px;color:#8492A5;font-family:var(--mono);font-size:10.5px}
+.pt-illus{display:flex;justify-content:center}
+.pt-illus svg{width:100%;max-width:430px;height:auto}
+@media(max-width:900px){.pt-wrap{grid-template-columns:1fr;gap:26px;padding:30px 20px 16px}.pt-title{font-size:32px}.pt-illus svg{max-width:320px}}
+
+/* ---- Barra superior del área de trabajo (header) ---- */
+#appbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:12px;justify-content:space-between;padding:10px 26px;background:var(--work-alt);border-bottom:1px solid var(--work-line)}
+.ab-muni{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);display:flex;align-items:center;gap:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab-muni .dotm{width:7px;height:7px;border-radius:50%;background:#8B9DC3;flex:none}
+.ab-muni.propio .dotm{background:var(--blue)}
+.brand{cursor:pointer}
+.brand:hover h1{color:var(--blue-light)}
+
+/* ---- Formulario de municipio ---- */
+.gridform{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.gridform .full{grid-column:1/-1}
+.flabel{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--blue-dark);margin:8px 0 4px;font-weight:500}
+.ferr{color:#B4232C;font-size:12.5px;margin-top:10px;display:none;font-weight:600}
+input.inv,select.inv{border-color:#EF4444!important}
+@media(max-width:700px){.gridform{grid-template-columns:1fr}}
+
 /* ---- Impresión limpia del informe (M6) ---- */
 @media print{
   #banda-demo{position:static;height:auto;border:0;background:#fff;color:#8A5C00;justify-content:flex-start;padding:0 0 8px}
@@ -457,16 +498,62 @@ details.faq .faq-a b{color:var(--ink)}
   DATOS DE DEMOSTRACIÓN — Municipalidad ficticia. Ninguna cifra corresponde a un municipio real.
 </div>
 
+<!-- ===================== PORTADA ===================== -->
+<section id="portada" aria-label="Portada MunIA Cobranza">
+  <div class="pt-wrap">
+    <div>
+      <div class="pt-brandrow">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#2196F3"/><circle cx="46" cy="56" r="24" fill="none" stroke="#fff" stroke-width="10"/><line x1="70" y1="32" x2="70" y2="80" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="46" cy="56" r="6" fill="rgba(255,255,255,.85)"/><circle cx="70" cy="32" r="6" fill="rgba(255,255,255,.6)"/></svg>
+        <div class="pt-wordmark">Mun<span>IA</span> Cobranza</div>
+      </div>
+      <div class="pt-badge">Gestión de cobranza municipal</div>
+      <h1 class="pt-title">La improvisación no cobra.<br>La gestión <span>sí</span>.</h1>
+      <p class="pt-sub">Ordene la cartera de patentes por cuota, vigile el reloj de prescripción (art. 2521 CC) y fundamente cada decisión con criterio jurídico — antes de que la deuda muera por omisión.</p>
+      <div class="pt-ctas">
+        <button class="pt-btn pt-btn-primary" onclick="verDemo()">Ver municipio de prueba →</button>
+        <button class="pt-btn pt-btn-ghost" id="pt-crear" onclick="ptCrear()">Crear mi municipio</button>
+      </div>
+      <p class="pt-note">Demo con datos 100% sintéticos · todo se procesa localmente: nada sale de su navegador.</p>
+    </div>
+    <div class="pt-illus">
+      <svg viewBox="0 0 440 340" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="230" cy="168" r="150" stroke="#1E2D4A" stroke-width="1" stroke-dasharray="3 7"/>
+        <circle cx="230" cy="168" r="108" stroke="#1E2D4A" stroke-width="14"/>
+        <g transform="rotate(-90 230 168)">
+          <circle cx="230" cy="168" r="108" stroke="#10B981" stroke-width="14" stroke-linecap="round" stroke-dasharray="258 679"/>
+          <circle cx="230" cy="168" r="108" stroke="#F59E0B" stroke-width="14" stroke-linecap="round" stroke-dasharray="156 679" stroke-dashoffset="-272"/>
+          <circle cx="230" cy="168" r="108" stroke="#EF4444" stroke-width="14" stroke-linecap="round" stroke-dasharray="95 679" stroke-dashoffset="-442"/>
+        </g>
+        <circle cx="230" cy="60" r="6" fill="#EF4444"/>
+        <text x="230" y="162" text-anchor="middle" font-family="DM Mono,monospace" font-size="34" fill="#EF4444">T−180</text>
+        <text x="230" y="186" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#8B9DC3">días a prescripción</text>
+        <text x="230" y="200" text-anchor="middle" font-family="DM Mono,monospace" font-size="10" fill="#8B9DC3">art. 2521 CC</text>
+        <g stroke="#42A5F5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(18,218)">
+          <path d="M40 2 6 20h68L40 2Z"/><path d="M14 20v44M31 20v44M49 20v44M66 20v44"/><path d="M6 64h68"/>
+        </g>
+        <g stroke="#8B9DC3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" transform="translate(352,64)">
+          <path d="M0 0h42l16 16v58H0z"/><path d="M42 0v16h16"/><path d="M10 30h38M10 42h30M10 54h34"/>
+          <circle cx="44" cy="62" r="9" stroke="#2196F3"/><path d="M40 62l3 3 6-6" stroke="#2196F3"/>
+        </g>
+        <path d="M96 240 C 140 240 150 220 170 206" stroke="#2A3A5C" stroke-width="1.5" stroke-dasharray="2 6"/>
+        <path d="M352 96 C 330 100 320 110 310 118" stroke="#2A3A5C" stroke-width="1.5" stroke-dasharray="2 6"/>
+        <circle cx="96" cy="240" r="3.5" fill="#2196F3"/><circle cx="352" cy="96" r="3.5" fill="#2196F3"/>
+      </svg>
+    </div>
+  </div>
+  <div class="pt-foot">ALTKimia · contacto@munia.cl · munia.cl</div>
+</section>
+
 <div id="app">
   <!-- ===================== NAVEGACIÓN ===================== -->
   <nav id="nav">
-    <div class="brand">
+    <div class="brand" role="button" tabindex="0" title="Volver a la portada" onclick="mostrarPortada()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();mostrarPortada()}">
       <div class="brand-mark">
         <svg aria-hidden="true" focusable="false" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="22" fill="#2196F3"/><circle cx="46" cy="56" r="24" fill="none" stroke="#fff" stroke-width="10"/><line x1="70" y1="32" x2="70" y2="80" stroke="#fff" stroke-width="10" stroke-linecap="round"/><circle cx="46" cy="56" r="6" fill="rgba(255,255,255,.85)"/><circle cx="70" cy="32" r="6" fill="rgba(255,255,255,.6)"/></svg>
       </div>
       <div>
         <h1>Mun<span>IA</span></h1>
-        <p>Cobranza · V. Esperanza</p>
+        <p id="brand-tag">Cobranza · V. Esperanza</p>
       </div>
     </div>
 
@@ -480,7 +567,13 @@ details.faq .faq-a b{color:var(--ink)}
   </nav>
 
   <!-- ===================== ÁREA DE TRABAJO ===================== -->
-  <main id="main"><div id="view" class="view"></div></main>
+  <main id="main">
+    <div id="appbar">
+      <span class="ab-muni" id="ab-muni"><span class="dotm"></span>Municipio de prueba: Villa Esperanza (sintético)</span>
+      <button class="btn btn-blue" id="ab-crear" style="flex:none" onclick="crearMunicipio()">Crear tu municipalidad</button>
+    </div>
+    <div id="view" class="view"></div>
+  </main>
 </div>
 
 <!-- ===================== ELEMENTOS FLOTANTES (M10 / M11) ===================== -->
@@ -2251,6 +2344,94 @@ function vistaAyuda(){
   </div>`;
 }
 
+/* ---------------------------------------------------------------------------
+   PORTADA Y MUNICIPIO PROPIO
+   El municipio configurado y su administrador se guardan SOLO en localStorage
+   (minimización: únicamente los campos necesarios; nada sale del navegador).
+--------------------------------------------------------------------------- */
+function cargarMuni(){try{return JSON.parse(localStorage.getItem(NS+'municipio')||'null');}catch(e){return null;}}
+function guardarMuniLS(m){try{localStorage.setItem(NS+'municipio',JSON.stringify(m));}catch(e){}}
+let MUNI=cargarMuni();
+const REGIONES=['Arica y Parinacota','Tarapacá','Antofagasta','Atacama','Coquimbo','Valparaíso','Metropolitana','O\'Higgins','Maule','Ñuble','Biobío','La Araucanía','Los Ríos','Los Lagos','Aysén','Magallanes'];
+
+/* sessionStorage puede estar bloqueado en visores embebidos; nunca debe romper la navegación */
+function ssGet(k){try{return sessionStorage.getItem(k);}catch(e){return null;}}
+function ssSet(k,v){try{sessionStorage.setItem(k,v);}catch(e){}}
+function ssDel(k){try{sessionStorage.removeItem(k);}catch(e){}}
+function mostrarPortada(){document.getElementById('portada').style.display='flex';ssDel(NS+'entrado');}
+function ocultarPortada(){document.getElementById('portada').style.display='none';ssSet(NS+'entrado','1');}
+function verDemo(){ocultarPortada();ir('induccion');}
+/* Botón "crear" de la portada: si ya hay municipio, continúa directo a la carga */
+function ptCrear(){if(MUNI){ocultarPortada();ir('m2');}else crearMunicipio();}
+
+/* Refleja el estado del municipio en la barra superior, la marca y la portada */
+function pintarMuni(){
+  const chip=document.getElementById('ab-muni'),btn=document.getElementById('ab-crear'),
+        tag=document.getElementById('brand-tag'),pc=document.getElementById('pt-crear');
+  if(MUNI){
+    chip.innerHTML='<span class="dotm"></span>Municipio: '+MUNI.comuna+(MUNI.region?' ('+MUNI.region+')':'')+' · Admin: '+MUNI.admin_nombre;
+    chip.classList.add('propio');
+    btn.textContent='Editar municipio';
+    if(tag)tag.textContent='Cobranza · '+MUNI.comuna;
+    if(pc)pc.textContent='Continuar con '+MUNI.comuna+' →';
+  }else{
+    chip.innerHTML='<span class="dotm"></span>Municipio de prueba: Villa Esperanza (sintético)';
+    chip.classList.remove('propio');
+    btn.textContent='Crear tu municipalidad';
+    if(tag)tag.textContent='Cobranza · V. Esperanza';
+    if(pc)pc.textContent='Crear mi municipio';
+  }
+}
+
+function crearMunicipio(){
+  const m=MUNI||{};
+  abrirModal((MUNI?'Editar':'Crear')+' municipalidad',`
+    <p class="view-sub" style="margin-bottom:10px">Configure su municipio y luego cargue su padrón y su archivo SII en <b>Carga y conciliación</b> para procesarlos.</p>
+    <p class="note" style="margin-bottom:12px">Estos datos se guardan solo en este navegador (localStorage); no se envían a ningún servidor.</p>
+    <div class="flabel">Datos de la municipalidad</div>
+    <div class="gridform">
+      <div class="field full"><label>Nombre de la comuna *</label><input id="mu-comuna" type="text" placeholder="p. ej. Municipalidad de San Fermín" value="${m.comuna||''}"></div>
+      <div class="field"><label>Región</label><select id="mu-region"><option value=""></option>${REGIONES.map(r=>`<option ${m.region===r?'selected':''}>${r}</option>`).join('')}</select></div>
+      <div class="field"><label>Habitantes (opcional)</label><input id="mu-hab" type="number" min="0" value="${m.habitantes||''}"></div>
+    </div>
+    <div class="flabel" style="margin-top:12px">Contacto del administrador</div>
+    <div class="gridform">
+      <div class="field"><label>Nombre completo *</label><input id="mu-adm" type="text" value="${m.admin_nombre||''}"></div>
+      <div class="field"><label>Cargo / unidad</label><input id="mu-cargo" type="text" placeholder="p. ej. Dirección de Rentas" value="${m.admin_cargo||''}"></div>
+      <div class="field"><label>Correo *</label><input id="mu-mail" type="email" placeholder="nombre@municipio.cl" value="${m.admin_correo||''}"></div>
+      <div class="field"><label>Teléfono (opcional)</label><input id="mu-fono" type="tel" value="${m.admin_fono||''}"></div>
+    </div>
+    <div class="ferr" id="mu-err"></div>
+    <div style="display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="guardarMunicipio()">${MUNI?'Guardar cambios':'Crear y continuar →'}</button>
+      ${MUNI?'<button class="btn btn-ghost" onclick="borrarMunicipio()">Quitar municipio</button>':''}
+    </div>`);
+  setTimeout(()=>{const el=document.getElementById('mu-comuna');if(el)el.focus();},80);
+}
+
+function guardarMunicipio(){
+  const v=id=>document.getElementById(id).value.trim();
+  const err=document.getElementById('mu-err');
+  ['mu-comuna','mu-adm','mu-mail'].forEach(i=>document.getElementById(i).classList.remove('inv'));
+  const comuna=v('mu-comuna'),adm=v('mu-adm'),mail=v('mu-mail');
+  const faltan=[];
+  if(!comuna){faltan.push('el nombre de la comuna');document.getElementById('mu-comuna').classList.add('inv');}
+  if(!adm){faltan.push('el nombre del administrador');document.getElementById('mu-adm').classList.add('inv');}
+  if(!mail||!/.+@.+\..+/.test(mail)){faltan.push('un correo válido');document.getElementById('mu-mail').classList.add('inv');}
+  if(faltan.length){err.style.display='block';err.textContent='Falta '+faltan.join(', ')+'.';return;}
+  const esNuevo=!MUNI;
+  MUNI={comuna,region:v('mu-region'),habitantes:v('mu-hab'),admin_nombre:adm,admin_cargo:v('mu-cargo'),
+        admin_correo:mail,admin_fono:v('mu-fono'),creado:(MUNI&&MUNI.creado)||fmtFecha(new Date())};
+  guardarMuniLS(MUNI);pintarMuni();
+  logAudit(esNuevo?'Municipio creado':'Municipio editado',comuna+' · '+adm);
+  cerrarModal();
+  if(esNuevo){ocultarPortada();ir('m2');}else render();
+}
+function borrarMunicipio(){
+  MUNI=null;try{localStorage.removeItem(NS+'municipio');}catch(e){}
+  pintarMuni();logAudit('Municipio eliminado');cerrarModal();render();
+}
+
 /* ===========================================================================
    12 · EXPORTACIÓN CSV (sin librerías)
    =========================================================================== */
@@ -2301,6 +2482,9 @@ document.addEventListener('keydown',e=>{
 });
 pintarNav();
 render();
+pintarMuni();
+// La portada es la pantalla de inicio; dentro de la misma sesión no se repite.
+if(ssGet(NS+'entrado'))document.getElementById('portada').style.display='none';
 </script>
 </body>
 </html>
