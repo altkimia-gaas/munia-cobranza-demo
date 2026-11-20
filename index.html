@@ -1,0 +1,2303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MunIA Cobranza — MVP demostrable</title>
+<!--
+  ============================================================================
+  MunIA Cobranza — MVP demostrable (single-file, sin backend)
+  ALTKimia SpA · Municipalidad ficticia de Villa Esperanza
+  ----------------------------------------------------------------------------
+  COMPLETO: 13 módulos — Inducción · M1 brecha · M3 cartera · M4 prescripción ·
+  M5 ficha · M6 informe · M2 carga · M7 comunicaciones · M8 convenio ·
+  M9 transparencia · M10 levantamiento · M11 guion · Ayuda.
+  Branding: munia.cl (violeta #4F46E5, Inter + DM Mono, logo cívico).
+  ----------------------------------------------------------------------------
+  RESTRICCIÓN FUNDACIONAL: todos los datos son SINTÉTICOS. La banda ámbar
+  superior es fija y no descartable en el 100% de las vistas.
+  Todo el código está comentado en español.
+  ============================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ===========================================================================
+   VARIABLES DE IDENTIDAD VISUAL
+   - Shell/navegación oscuros; área de trabajo clara (el funcionario trabaja
+     horas en esta pantalla).
+   - Azul de acento máximo ~20% de la composición.
+   - Semáforo (verde/ámbar/rojo/negro) EXCLUSIVO para estado de prescripción.
+   =========================================================================== */
+:root{
+  /* Marca MunIA (munia.cl): violeta sobre shell oscuro + área de trabajo clara */
+  --abyss:#080B12; --night:#0D1117; --panel:#111827; --panel-2:#161F30;
+  --border:#1E2D4A; --border-soft:#26364F;
+  --work:#FFFFFF; --work-alt:#F7F8FC; --work-line:#D1D9E6;
+  --ink:#0A0E1A; --ink-soft:#4B5563; --ink-mute:#647186;   /* ≥4.5:1 sobre blanco y F7F8FC (WCAG AA) */
+  --blue:#4F46E5; --blue-dark:#4338CA; --blue-light:#818CF8; --blue-soft:#EEF2FF;
+  --green:#10B981; --amber:#F59E0B; --red:#EF4444; --black-chip:#0A0E1A;
+  --amber-band:#F59E0B;
+  --civic-grad:linear-gradient(135deg,#002449 0%,#632ce5 100%);
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --title:'Inter',var(--sans);
+  --mono:'DM Mono','SFMono-Regular',Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--abyss);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(79,70,229,.28)}
+/* Foco visible para navegación con teclado (WCAG 2.4.7) */
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+#nav :focus-visible,.fab:focus-visible,#guion-panel :focus-visible{outline-color:var(--blue-light)}
+
+/* ---- Banda de datos de demostración: fija, no descartable ---- */
+#banda-demo{
+  position:fixed;top:0;left:0;right:0;height:26px;z-index:1000;
+  background:var(--amber-band);color:#3A2A00;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--mono);font-size:11.5px;font-weight:500;letter-spacing:.2px;
+  border-bottom:1px solid #C77E00;padding:0 12px;text-align:center;
+}
+#banda-demo svg{flex:none}
+
+/* ---- Layout general ---- */
+#app{position:fixed;top:26px;left:0;right:0;bottom:0;display:flex;background:var(--night)}
+#nav{width:236px;flex:none;background:var(--abyss);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;
+  background-image:linear-gradient(rgba(129,140,248,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(129,140,248,.05) 1px,transparent 1px);background-size:28px 28px}
+#main{flex:1;background:var(--work-alt);overflow-y:auto;position:relative}
+
+/* ---- Marca ---- */
+.brand{padding:16px 16px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--civic-grad);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 0 0 1px rgba(129,140,248,.25) inset}
+.brand-mark svg{width:19px;height:19px}
+.brand h1{font-family:var(--title);font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1}
+.brand h1 span{color:var(--blue-light)}
+.brand p{font-size:9px;color:#8492A5;margin-top:3px;font-family:var(--mono);letter-spacing:1.4px;text-transform:uppercase}
+
+/* ---- Navegación ---- */
+.nav-group{padding:10px 10px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#8492A5;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 14px;margin:1px 8px;border-radius:7px;color:#AEB9C7;cursor:pointer;font-size:13px;font-weight:500;user-select:none;border:1px solid transparent}
+.nav-item:hover{background:var(--panel);color:#E4EAF1}
+.nav-item.active{background:rgba(79,70,229,.14);color:#fff;border-color:rgba(129,140,248,.30)}
+.nav-item.active .ico{color:var(--blue-light)}
+.nav-item .ico{width:17px;height:17px;flex:none;color:currentColor}
+.nav-item .badge{margin-left:auto;font-family:var(--mono);font-size:11px;padding:1px 6px;border-radius:10px;background:rgba(79,70,229,.18);color:var(--blue-light);border:1px solid rgba(129,140,248,.30)}
+.nav-item.soon{opacity:.5}
+.nav-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:10.5px;color:#8492A5;font-family:var(--mono)}
+
+/* ---- Toggle levantamiento (placeholder visual, M10 en checkpoint futuro) ---- */
+.lev-toggle{display:flex;align-items:center;gap:8px;margin:8px 12px;padding:8px 12px;border:1px solid var(--border-soft);border-radius:8px;color:#8492A5;font-size:12px}
+.lev-toggle .dot{width:8px;height:8px;border-radius:50%;background:#3A4658}
+
+/* ---- Área de trabajo ---- */
+.view{padding:22px 26px 60px;max-width:1240px}
+.view-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.view-title{font-family:var(--title);font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.6px}
+.view-sub{color:var(--ink-soft);font-size:13px;margin-top:3px;max-width:640px}
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+
+/* ---- Tarjetas de brecha (M1) ---- */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.card{background:var(--work);border:1px solid var(--work-line);border-radius:12px;padding:18px;display:flex;flex-direction:column;min-height:168px}
+.card .k-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(79,70,229,.10);color:var(--blue-dark);margin-bottom:12px}
+.card .k-ico svg{width:18px;height:18px}
+.card .k-num{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;color:var(--ink);letter-spacing:-1px}
+.card .k-lbl{font-size:13px;font-weight:600;color:var(--ink);margin-top:8px}
+.card .k-norm{font-size:11px;color:var(--ink-mute);margin-top:6px;line-height:1.35;flex:1}
+.card .k-cta{margin-top:12px;align-self:flex-start;font-size:12px;font-weight:600;color:var(--blue);background:var(--blue-soft);border:1px solid #C7CCF7;border-radius:7px;padding:6px 11px;cursor:pointer;font-family:var(--sans)}
+.card .k-cta:hover{background:#E0E3FB}
+.card.accent-num .k-num{color:var(--amber)}
+.card.accent-red .k-num{color:var(--red)}
+
+/* ---- Bloque de procedencia ---- */
+.origin{background:var(--work);border:1px solid var(--work-line);border-radius:12px;padding:16px 18px;margin-bottom:8px}
+.origin h3{font-family:var(--title);font-size:14px;margin-bottom:10px;color:var(--ink)}
+.origin .rows{display:grid;grid-template-columns:1fr 1fr;gap:8px 22px}
+.origin .r{display:flex;gap:9px;font-size:12px;color:var(--ink-soft);align-items:flex-start}
+.origin .r b{color:var(--ink);font-weight:600}
+.origin .r .src{font-family:var(--mono);font-size:11px;color:var(--ink-mute)}
+.origin .r i{color:var(--blue);flex:none;margin-top:1px}
+
+/* ---- Tabla genérica ---- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-mute);font-weight:600}
+select,input[type=text],input[type=number],textarea{font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--work);border:1px solid var(--work-line);border-radius:8px;padding:7px 10px;outline:none}
+select:focus,input:focus,textarea:focus{border-color:var(--blue)}
+.btn{font-family:var(--sans);font-size:13px;font-weight:600;border-radius:8px;padding:8px 13px;cursor:pointer;border:1px solid transparent;background:var(--work);color:var(--ink);border-color:var(--work-line)}
+.btn:hover{background:var(--work-alt)}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-blue:hover{background:#4338CA}
+.btn-ghost{background:transparent;border-color:var(--work-line)}
+.count-pill{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+
+/* Tamaño de íconos SVG en contenedores sin clase de tamaño (evita SVG gigantes) */
+.origin .r svg{width:17px;height:17px;flex:none;color:var(--blue);stroke-width:2}
+.tl2 .col-head svg{width:18px;height:18px;flex:none;color:var(--blue)}
+.soon-panel .sp-ico svg{width:38px;height:38px}
+.drop .d-ico svg{width:36px;height:36px}
+
+.table-wrap{background:var(--work);border:1px solid var(--work-line);border-radius:12px;overflow:hidden}
+.tbl-scroll{max-height:calc(100vh - 320px);overflow:auto}
+table{width:100%;border-collapse:collapse}
+thead th{position:sticky;top:0;background:var(--work);z-index:2;text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-mute);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--work-line);white-space:nowrap;cursor:pointer;user-select:none}
+thead th.sortable:hover{color:var(--ink)}
+thead th .arrow{color:var(--blue)}
+tbody td{padding:9px 12px;border-bottom:1px solid var(--work-alt);font-size:12.5px;color:var(--ink);white-space:nowrap}
+tbody tr:hover{background:var(--work-alt)}
+/* Affordance: en la cartera, la fila es clickeable (abre la ficha) */
+#m3-table tbody tr:hover td:nth-child(2){color:var(--blue-dark);text-decoration:underline}
+.mono{font-family:var(--mono)}
+.num{font-family:var(--mono);text-align:right}
+.muted{color:var(--ink-mute)}
+
+/* ---- Semáforo de prescripción (uso EXCLUSIVO) ---- */
+.sem{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;font-weight:500}
+.sem .d{width:9px;height:9px;border-radius:50%;flex:none}
+.sem.verde .d{background:var(--green)} .sem.verde{color:#0A7C5A}
+.sem.ambar .d{background:var(--amber)} .sem.ambar{color:#8A5C00}
+.sem.rojo .d{background:var(--red)} .sem.rojo{color:#B4232C}
+.sem.negro .d{background:var(--black-chip)} .sem.negro{color:var(--black-chip)}
+.sem.na .d{background:var(--work-line)} .sem.na{color:var(--ink-mute)}
+
+/* ---- Chips de estado ---- */
+.chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid;font-family:var(--sans)}
+.chip.pagada{color:#0A7C5A;background:#E7F7F0;border-color:#BEEAD8}
+.chip.impaga{color:#8A5C00;background:#FDF4E3;border-color:#F4E0B4}
+.chip.convenida{color:#4338CA;background:var(--blue-soft);border-color:#C7CCF7}
+.chip.prescrita{color:#fff;background:var(--black-chip);border-color:var(--black-chip)}
+.chip.en_juicio{color:#6D28D9;background:#F1EBFB;border-color:#DDCEF6}
+.chip.incobrable{color:#57606E;background:#EEF1F5;border-color:#DCE2EA}
+.gate{display:inline-block;font-size:10px;font-family:var(--mono);color:var(--ink-soft);background:var(--work-alt);border:1px solid var(--work-line);border-radius:5px;padding:1px 6px;margin-right:3px}
+
+/* ---- M4: cortes / línea de tiempo / simulador ---- */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.box{background:var(--work);border:1px solid var(--work-line);border-radius:12px;padding:18px}
+.box h3{font-family:var(--title);font-size:15px;margin-bottom:4px;color:var(--ink)}
+.box .h-sub{font-size:12px;color:var(--ink-mute);margin-bottom:14px}
+.cut{display:flex;align-items:baseline;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--work-alt)}
+.cut:last-child{border-bottom:0}
+.cut .c-lbl{font-size:13px;font-weight:600}
+.cut .c-desc{font-size:11px;color:var(--ink-mute)}
+.cut .c-num{font-family:var(--mono);font-size:24px;font-weight:500}
+.legal-box{border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:0 10px 10px 0;padding:14px 16px;font-size:12.5px;color:#312E81;line-height:1.5}
+.legal-box b{color:#1E1B4B}
+.legal-box ol{margin:8px 0 8px 18px}
+.legal-box .warn{color:#B4232C;font-weight:600;margin-top:8px;display:block}
+.legal-box .cite{font-family:var(--mono);font-size:11px;color:#4F46E5;display:block;margin-top:8px}
+
+/* Línea de tiempo por cuota */
+.timeline{margin-top:6px}
+.tl-track{position:relative;height:54px;margin:34px 6px 6px}
+.tl-line{position:absolute;top:26px;left:0;right:0;height:3px;background:var(--work-line);border-radius:2px}
+.tl-fill{position:absolute;top:26px;left:0;height:3px;border-radius:2px}
+.tl-node{position:absolute;top:18px;width:16px;height:16px;border-radius:50%;transform:translateX(-50%);border:3px solid var(--work);box-shadow:0 0 0 1px var(--work-line)}
+.tl-lbl{position:absolute;top:-4px;transform:translateX(-50%);font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);white-space:nowrap}
+.tl-date{position:absolute;top:38px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:var(--ink-mute);white-space:nowrap}
+
+.sim-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.reloj{font-family:var(--mono);font-size:30px;font-weight:500;letter-spacing:-.5px}
+.pulse{animation:pulse 1.4s ease-in-out 2}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.flash{animation:flash 1.6s ease-out 1}
+@keyframes flash{0%{background:#FEF6E7}100%{background:var(--work)}}
+.counter-strip{display:flex;gap:26px;flex-wrap:wrap;background:var(--night);border-radius:12px;padding:16px 20px;color:#fff;margin-top:16px}
+.counter-strip .cs{display:flex;flex-direction:column}
+.counter-strip .cs .n{font-family:var(--mono);font-size:26px;color:var(--blue-light)}
+.counter-strip .cs .l{font-size:11px;color:#93A2B5}
+
+/* ---- Modal ---- */
+.modal-bg{position:fixed;inset:0;background:rgba(6,9,15,.55);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding:60px 20px;overflow:auto}
+.modal-bg.open{display:flex}
+.modal{background:var(--work);border-radius:14px;max-width:900px;width:100%;border:1px solid var(--work-line)}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--work-line)}
+.modal-head h3{font-family:var(--title);font-size:16px}
+.modal-body{padding:6px 20px 20px}
+.x{cursor:pointer;color:var(--ink-mute);width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.x:hover{background:var(--work-alt);color:var(--ink)}
+
+/* ---- Panel "próximo checkpoint" ---- */
+.soon-panel{background:var(--work);border:1px dashed var(--work-line);border-radius:12px;padding:40px;text-align:center;color:var(--ink-mute)}
+.soon-panel .sp-ico{width:40px;height:40px;margin:0 auto 12px;color:var(--ink-mute)}
+.soon-panel h3{font-family:var(--title);font-size:17px;color:var(--ink-soft);margin-bottom:6px}
+
+.note{font-size:11px;color:var(--ink-mute);font-family:var(--mono)}
+.sim-tag{display:inline-block;font-family:var(--mono);font-size:10px;color:#8A5C00;background:#FDF4E3;border:1px solid #F4E0B4;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+
+/* ---- M5 · Ficha: identificación y contraste de domicilios ---- */
+.id-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-bottom:16px}
+.dom-contrast{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dom{border:1px solid var(--work-line);border-radius:10px;padding:12px 14px}
+.dom .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-mute);font-weight:600;margin-bottom:4px}
+.dom .v{font-family:var(--mono);font-size:13px;color:var(--ink)}
+.dom.diff{border-color:#F4E0B4;background:#FFFCF5}
+.dom.diff .v{color:#8A5C00}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--work-alt);font-size:13px}
+.kv:last-child{border-bottom:0}.kv .kk{color:var(--ink-mute)}.kv .vv{font-family:var(--mono);color:var(--ink);text-align:right}
+
+/* Dos líneas de tiempo PARALELAS y visualmente distintas (Actos vs Avisos) */
+.tl2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:6px}
+.tl2 .col-head{display:flex;align-items:center;gap:8px;font-family:var(--title);font-size:14px;margin-bottom:4px}
+.tl2 .col-head .tag{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:5px}
+.col-actos .col-head .tag{background:#EEF2FF;color:#4338CA;border:1px solid #C7CCF7}
+.col-avisos .col-head .tag{background:#EEF1F5;color:#57606E;border:1px solid #DCE2EA}
+.evt{position:relative;margin:10px 0 0 6px;padding:10px 12px 10px 16px;font-size:12.5px}
+.evt-actos{border-left:3px solid var(--blue);background:#FBFDFF;border-radius:0 8px 8px 0}
+.evt-avisos{border-left:3px dashed #9AA6B4;background:#FAFBFC;border-radius:0 8px 8px 0;color:var(--ink-soft)}
+.evt .e-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.evt .e-tipo{font-weight:600;color:var(--ink);text-transform:capitalize;display:flex;align-items:center;gap:6px}
+.evt-avisos .e-tipo{color:var(--ink-soft);font-weight:600}
+.evt .e-fecha{font-family:var(--mono);font-size:11px;color:var(--ink-mute)}
+.evt .e-meta{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:3px}
+.leyenda{background:var(--night);color:#C7D2DF;border-radius:10px;padding:12px 16px;font-size:12.5px;margin:14px 0 4px;line-height:1.5}
+.leyenda b{color:#fff}
+
+/* ---- M6 · Informe de antecedentes (documento) ---- */
+.doc{background:var(--work);border:1px solid var(--work-line);border-radius:12px;padding:30px 34px;max-width:820px}
+.doc h2{font-family:var(--title);font-size:19px;margin-bottom:2px}
+.doc .doc-sub{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-bottom:18px}
+.doc-demo{font-family:var(--mono);font-size:11px;color:#8A5C00;background:#FDF4E3;border:1px solid #F4E0B4;border-radius:6px;padding:6px 10px;margin-bottom:16px;display:inline-block}
+.doc section{margin:16px 0;padding-top:14px;border-top:1px solid var(--work-line)}
+.doc .s-num{font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:500}
+.doc .s-tit{font-family:var(--title);font-size:14px;margin:2px 0 8px}
+.doc .fuente{font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding:4px 0;display:flex;gap:8px}
+.doc .fuente b{color:var(--ink)}
+.doc .no-verif{background:#FFF7F7;border:1px solid #F6D5D5;border-radius:8px;padding:10px 12px}
+.doc .no-verif li{margin-left:16px}
+.sign-box{background:var(--work-alt);border:1px solid var(--work-line);border-radius:10px;padding:16px}
+.sign-box textarea{width:100%;min-height:76px;resize:vertical}
+.charc{font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:4px}
+.charc.ok{color:#0A7C5A}
+.legal-nota{border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:0 8px 8px 0;padding:12px 14px;font-size:12px;color:#312E81;margin-top:14px}
+.firmado-sello{border:2px solid var(--green);color:#0A7C5A;border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+
+/* ---- M2 · Carga y conciliación ---- */
+.drop{border:2px dashed var(--work-line);border-radius:12px;padding:22px 18px;text-align:center;color:var(--ink-mute);background:var(--work);cursor:pointer;height:100%}
+.drop.hover{border-color:var(--blue);background:var(--blue-soft)}
+.drop .d-ico{width:30px;height:30px;margin:0 auto 8px;color:var(--ink-mute)}
+.drop.cargado{border-style:solid;border-color:#BEEAD8;background:#FBFEFC;color:var(--ink-soft)}
+.paso-lbl{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;color:var(--blue-dark);margin-bottom:6px;font-weight:500}
+.padron-chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:14px;border:1px solid}
+.padron-chip.demo{color:#8A5C00;background:#FDF4E3;border-color:#F4E0B4}
+.padron-chip.real{color:#0A7C5A;background:#E7F7F0;border-color:#BEEAD8}
+.recon-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.recon-card{border:1px solid var(--work-line);border-radius:10px;padding:14px 16px;background:var(--work)}
+.recon-card .rc-n{font-family:var(--mono);font-size:28px;font-weight:500}
+.recon-card .rc-l{font-size:12px;color:var(--ink-soft);margin-top:2px}
+/* Colores NO semáforo (azul/gris/oscuro): el verde/ámbar/rojo queda reservado
+   a la prescripción. La conciliación es otro eje y no debe confundirse. */
+.recon-card.exacta{border-left:3px solid var(--blue)} .recon-card.exacta .rc-n{color:var(--ink)}
+.recon-card.difusa{border-left:3px solid var(--border-soft)} .recon-card.difusa .rc-n{color:var(--ink)}
+.recon-card.sin{border-left:3px solid var(--night);background:#F4F7FB} .recon-card.sin .rc-n{color:var(--ink)}
+.mtag{font-size:10.5px;font-family:var(--mono);padding:1px 6px;border-radius:5px;border:1px solid}
+.mtag.exacta{color:#4338CA;background:var(--blue-soft);border-color:#C7CCF7}
+.mtag.difusa{color:#57606E;background:#EEF1F5;border-color:#DCE2EA}
+.mtag.sin{color:#fff;background:var(--night);border-color:var(--night)}
+
+/* ---- M7 · Comunicaciones ---- */
+.hitos{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.hito{flex:1 0 150px;border:1px solid var(--work-line);border-radius:10px;padding:12px 14px;background:var(--work)}
+.hito .h-t{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--ink)}
+.hito .h-ev{font-size:12px;color:var(--ink);margin:4px 0 2px;font-weight:600}
+.hito .h-canal{font-size:11px;color:var(--ink-mute);font-family:var(--mono)}
+.hito .h-efecto{margin-top:8px;font-size:10.5px;font-family:var(--mono);padding:1px 7px;border-radius:20px;display:inline-block;border:1px solid}
+.hito .h-efecto.si{color:#4338CA;background:var(--blue-soft);border-color:#C7CCF7}
+.hito .h-efecto.no{color:#57606E;background:#EEF1F5;border-color:#DCE2EA}
+.phone{border:2px solid var(--night);border-radius:26px;padding:14px 12px 18px;max-width:290px;background:#0D1117}
+.phone .p-top{height:18px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.phone .p-top .notch{width:80px;height:6px;border-radius:6px;background:#2A3340}
+.phone .p-app{background:#0B141A;border-radius:12px;overflow:hidden;border:1px solid #202B36}
+.phone .p-head{background:#1F2C33;color:#E6EDF2;padding:8px 12px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.phone .p-head .av{width:22px;height:22px;border-radius:50%;background:#2E7D5B;flex:none}
+.phone .p-body{padding:14px 10px;min-height:120px;background:#0B141A}
+.bubble{background:#144D37;color:#E6F4EC;border-radius:10px 10px 10px 2px;padding:9px 11px;font-size:12.5px;line-height:1.45;max-width:92%}
+.bubble .t{font-size:9.5px;color:#9FC7B3;text-align:right;margin-top:4px}
+.reasons li{margin:8px 0;padding-left:2px;font-size:12.5px;line-height:1.5}
+.reasons li b{color:var(--ink)}
+.validador-out{border:1px solid var(--work-line);border-radius:8px;padding:12px;min-height:56px;font-size:13px;line-height:1.7;background:var(--work-alt)}
+.bad{background:#FDECEC;color:#B4232C;border-bottom:2px solid #EF4444;border-radius:3px;padding:0 3px;font-weight:600}
+.finding{display:flex;gap:8px;align-items:flex-start;font-size:12px;padding:6px 0;border-bottom:1px solid var(--work-alt)}
+.finding .term{font-family:var(--mono);color:#B4232C;font-weight:600;flex:none;min-width:88px}
+.ok-msg{color:#0A7C5A;font-size:12.5px;font-family:var(--mono)}
+
+/* ---- M8 · Convenio ---- */
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+.plan-out{background:var(--night);color:#fff;border-radius:12px;padding:16px 20px;display:flex;gap:26px;flex-wrap:wrap;align-items:center}
+.plan-out .po{display:flex;flex-direction:column}
+.plan-out .po .n{font-family:var(--mono);font-size:24px;color:var(--blue-light)}
+.plan-out .po .l{font-size:11px;color:#93A2B5}
+
+/* ---- M9 · Transparencia ---- */
+.transp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.transp-col{border:1px solid var(--work-line);border-radius:10px;padding:14px 16px;background:var(--work)}
+.transp-col h4{font-family:var(--title);font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.transp-col ul{margin-left:16px}
+.transp-col li{font-size:12.5px;margin:5px 0}
+.dot-ai{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.dot-hum{width:8px;height:8px;border-radius:2px;background:var(--ink-soft);display:inline-block}
+.licitud{border-left:3px solid var(--blue);background:var(--blue-soft);border-radius:0 10px 10px 0;padding:14px 16px;font-size:13px;color:#312E81;margin-bottom:16px;line-height:1.55}
+.bitacora{max-height:280px;overflow:auto}
+.bit-row{display:flex;gap:12px;font-size:12px;padding:7px 0;border-bottom:1px solid var(--work-alt);align-items:baseline}
+.bit-row .bt{font-family:var(--mono);font-size:11px;color:var(--ink-mute);flex:none;min-width:120px}
+.bit-row .ba{font-weight:600;flex:none;min-width:150px}
+
+/* ---- M10 · Modo levantamiento ---- */
+.lev-toggle{cursor:pointer}
+.lev-toggle.on{border-color:#1E5A44;background:#0E1E18;color:#7BD4AC}
+.lev-toggle.on .dot{background:var(--green)}
+.fab{position:fixed;right:18px;z-index:1500;font-family:var(--sans);font-size:13px;font-weight:600;border-radius:24px;padding:11px 18px;cursor:pointer;border:1px solid var(--border-soft);color:#fff;background:var(--night);display:flex;align-items:center;gap:8px}
+.fab:hover{background:var(--panel-2)}
+#guion-fab{bottom:18px}
+#lev-fab{bottom:70px;background:var(--green);border-color:var(--green);color:#04150E;display:none}
+.lev-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.lev-card{border:1px solid var(--work-line);border-radius:10px;padding:14px 16px;background:var(--work)}
+.lev-card .n{font-family:var(--mono);font-size:26px;color:var(--ink)}
+.lev-card .l{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.prio{font-size:10.5px;font-family:var(--mono);padding:1px 7px;border-radius:20px;border:1px solid}
+.prio.Crítico{color:#B4232C;background:#FDECEC;border-color:#F6D5D5}
+.prio.Importante{color:#4338CA;background:var(--blue-soft);border-color:#C7CCF7}
+.prio.Deseable{color:#57606E;background:#EEF1F5;border-color:#DCE2EA}
+.form-row{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font-family:var(--sans);font-size:12.5px;padding:7px 13px;border-radius:8px;border:1px solid var(--work-line);background:var(--work);cursor:pointer;color:var(--ink)}
+.seg button.sel{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* ---- M11 · Guion (panel del presentador) ---- */
+#guion-panel{position:fixed;top:26px;right:0;bottom:0;width:390px;max-width:88vw;transform:translateX(100%);transition:transform .25s ease;z-index:1400;background:var(--night);color:#E4EAF1;overflow-y:auto;border-left:1px solid var(--border);padding:18px 18px 40px}
+#guion-panel.open{transform:translateX(0)}
+#guion-panel h3{font-family:var(--title);color:#fff;font-size:16px;margin-bottom:2px}
+#guion-panel .gp-sub{font-size:11px;color:#8492A5;font-family:var(--mono);margin-bottom:14px}
+.gstep{border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--panel)}
+.gstep .g-min{font-family:var(--mono);font-size:12px;color:var(--blue-light);font-weight:500}
+.gstep .g-mod{font-family:var(--mono);font-size:11px;color:#8492A5;float:right}
+.gstep .g-mostrar{font-weight:600;color:#fff;margin:4px 0}
+.gstep .g-decir{font-size:12.5px;color:#C7D2DF;line-height:1.45}
+.gstep .g-preg{font-size:12.5px;color:#7BD4AC;margin-top:6px;font-style:italic}
+.gstep .g-go{margin-top:8px;font-size:11.5px;color:#fff;background:var(--blue);border:0;border-radius:6px;padding:5px 10px;cursor:pointer}
+.gstep.cierre{border-color:#3A5A2E;background:#12200E}
+.gstep.cierre .g-preg{color:#A6E27F;font-weight:600;font-style:normal}
+.kbd{font-family:var(--mono);font-size:11px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:4px;padding:1px 6px;color:#AEB9C7}
+@media print{#guion-fab,#lev-fab,#guion-panel{display:none!important}}
+
+/* ---- Inducción ---- */
+.ind-hero{background:var(--night);color:#E4EAF1;border-radius:14px;padding:22px 24px;margin-bottom:18px;background-image:linear-gradient(rgba(129,140,248,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(129,140,248,.06) 1px,transparent 1px);background-size:26px 26px}
+.ind-hero h2{font-family:var(--title);font-size:20px;font-weight:800;letter-spacing:-.5px;color:#fff;margin-bottom:6px}
+.ind-hero p{font-size:13px;color:#AEB9C7;max-width:660px;line-height:1.55}
+.ind-prog{display:flex;align-items:center;gap:12px;margin:16px 0 4px}
+.ind-prog .bar{flex:1;height:8px;border-radius:6px;background:var(--work-line);overflow:hidden}
+.ind-prog .bar i{display:block;height:100%;background:var(--blue);border-radius:6px;transition:width .3s}
+.ind-prog .lbl{font-family:var(--mono);font-size:12px;color:var(--ink-soft);white-space:nowrap}
+.ind-step{display:flex;gap:14px;align-items:flex-start;background:var(--work);border:1px solid var(--work-line);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.ind-step.done{border-color:#BEEAD8;background:#FBFEFC}
+.ind-num{width:30px;height:30px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:500;background:rgba(79,70,229,.10);color:var(--blue-dark)}
+.ind-step.done .ind-num{background:var(--green);color:#fff}
+.ind-step .st-body{flex:1}
+.ind-step .st-t{font-weight:600;font-size:14px}
+.ind-step .st-d{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.5}
+.ind-step .st-actions{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.chk{font-size:12px;font-family:var(--sans);border:1px solid var(--work-line);border-radius:7px;padding:6px 11px;cursor:pointer;background:var(--work);color:var(--ink-soft)}
+.chk.on{background:#E7F7F0;border-color:#BEEAD8;color:#0A7C5A}
+.concept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.concept{border:1px solid var(--work-line);border-radius:12px;padding:16px;background:var(--work)}
+.concept h4{font-family:var(--title);font-size:13.5px;margin-bottom:7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.concept .c-tag{font-family:var(--mono);font-size:10px;color:var(--blue-dark);background:var(--blue-soft);border:1px solid #C7CCF7;border-radius:5px;padding:1px 6px}
+.concept p{font-size:12.5px;color:var(--ink-soft);line-height:1.5}
+
+/* ---- Ayuda ---- */
+.ayuda-search{position:relative;margin-bottom:8px}
+.ayuda-search input{width:100%;padding:12px 14px 12px 40px;font-size:14px}
+.ayuda-search .s-ico{position:absolute;left:13px;top:11px;width:17px;height:17px;color:var(--ink-mute);pointer-events:none}
+.faq-cat{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--blue-dark);margin:18px 0 8px}
+details.faq{border:1px solid var(--work-line);border-radius:10px;margin-bottom:8px;background:var(--work);overflow:hidden}
+details.faq summary{padding:13px 16px;cursor:pointer;font-weight:600;font-size:13.5px;list-style:none;display:flex;align-items:flex-start;gap:11px}
+details.faq summary::-webkit-details-marker{display:none}
+details.faq summary::before{content:'+';font-family:var(--mono);color:var(--blue);font-size:17px;line-height:1.1;width:13px;flex:none}
+details.faq[open] summary::before{content:'–'}
+details.faq[open] summary{border-bottom:1px solid var(--work-alt)}
+details.faq .faq-a{padding:12px 16px 14px 40px;font-size:13px;color:var(--ink-soft);line-height:1.6}
+details.faq .faq-a b{color:var(--ink)}
+.glos{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 24px}
+.glos .g-item{padding:9px 0;border-bottom:1px solid var(--work-alt)}
+.glos .g-term{font-weight:600;font-size:13px}
+.glos .g-def{font-size:12.5px;color:var(--ink-soft);margin-top:2px;line-height:1.45}
+.no-result{padding:26px;text-align:center;color:var(--ink-mute);font-size:13px}
+@media(max-width:1180px){.concept-grid{grid-template-columns:1fr}.glos{grid-template-columns:1fr}}
+
+/* ---- Impresión limpia del informe (M6) ---- */
+@media print{
+  #banda-demo{position:static;height:auto;border:0;background:#fff;color:#8A5C00;justify-content:flex-start;padding:0 0 8px}
+  #nav{display:none!important}
+  #app{position:static;display:block}
+  #main{overflow:visible;background:#fff}
+  .view{padding:0;max-width:100%}
+  .no-print{display:none!important}
+  .doc{border:0;padding:0;max-width:100%}
+  .view-head,.eyebrow{display:none}
+  /* Las tablas con scroll interno deben expandirse al imprimir (si no, se cortan) */
+  .tbl-scroll,.bitacora{max-height:none!important;overflow:visible!important}
+  @page{margin:16mm}
+}
+
+/* ---- Responsive ---- */
+@media(max-width:1180px){.cards{grid-template-columns:repeat(2,1fr)}.origin .rows{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}.grid-3{grid-template-columns:1fr}}
+@media(max-width:820px){#nav{width:64px}.brand h1,.brand p,.nav-group,.nav-item span.t,.nav-foot,.lev-toggle span{display:none}.nav-item{justify-content:center}.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ===================== BANDA DE DEMOSTRACIÓN (fija, no descartable) ===================== -->
+<div id="banda-demo">
+  <svg width="13" height="13" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+  DATOS DE DEMOSTRACIÓN — Municipalidad ficticia. Ninguna cifra corresponde a un municipio real.
+</div>
+
+<div id="app">
+  <!-- ===================== NAVEGACIÓN ===================== -->
+  <nav id="nav">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2.5 8h19L12 3Z"/><path d="M5 8v11M9.7 8v11M14.3 8v11M19 8v11"/><path d="M2.5 21h19"/></svg>
+      </div>
+      <div>
+        <h1>Mun<span>IA</span></h1>
+        <p>Cobranza · V. Esperanza</p>
+      </div>
+    </div>
+
+    <div id="nav-list"></div>
+
+    <div class="lev-toggle" id="lev-toggle" role="switch" aria-checked="false" tabindex="0" onclick="toggleLevantamiento()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleLevantamiento()}"><span class="dot"></span><span id="lev-toggle-txt">Modo levantamiento · off</span></div>
+
+    <div class="nav-foot">
+      MVP v1.0 · ALTKimia SpA
+    </div>
+  </nav>
+
+  <!-- ===================== ÁREA DE TRABAJO ===================== -->
+  <main id="main"><div id="view" class="view"></div></main>
+</div>
+
+<!-- ===================== ELEMENTOS FLOTANTES (M10 / M11) ===================== -->
+<button class="fab" id="lev-fab" onclick="abrirComentario()">
+  <svg width="15" height="15" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+  Comentar este módulo
+</button>
+<button class="fab" id="guion-fab" onclick="toggleGuion()" aria-expanded="false" aria-controls="guion-panel">
+  <svg width="15" height="15" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>
+  Guion
+</button>
+<aside id="guion-panel"></aside>
+
+<!-- ===================== MODAL GENÉRICO ===================== -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modal-title"></h3><div class="x" role="button" tabindex="0" aria-label="Cerrar" onclick="cerrarModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();cerrarModal()}">✕</div></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+/* ===========================================================================
+   0 · CONFIGURACIÓN Y FECHA DE REFERENCIA
+   Toda la aritmética de prescripción se ancla a HOY para que el reloj sea real.
+   =========================================================================== */
+const NS='munia_cobranza_v1_';
+const HOY=new Date(2026,6,31);           // 31-07-2026 (mes 0-indexado: 6 = julio)
+const MS_DIA=86400000;
+const COMUNA='Villa Esperanza';
+
+/* Utilidades de fecha */
+function addAnios(f,n){const d=new Date(f);d.setFullYear(d.getFullYear()+n);return d;}
+function diffDias(a,b){return Math.round((a-b)/MS_DIA);}                 // a - b en días
+function fmtFecha(f){const d=String(f.getDate()).padStart(2,'0'),m=String(f.getMonth()+1).padStart(2,'0');return d+'-'+m+'-'+f.getFullYear();}
+function fmtCLP(n){return '$'+Math.round(n).toLocaleString('es-CL');}
+
+/* ===========================================================================
+   1 · PRNG DETERMINISTA (mulberry32)
+   Semilla fija => la demo es idéntica en cada carga (reproducibilidad).
+   =========================================================================== */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rnd=mulberry32(20260731);
+function ri(min,max){return Math.floor(rnd()*(max-min+1))+min;}          // entero en [min,max]
+function pick(arr){return arr[Math.floor(rnd()*arr.length)];}
+function chance(p){return rnd()<p;}
+
+/* ===========================================================================
+   2 · GENERADOR DE RUT SINTÉTICO CON DÍGITO VERIFICADOR VÁLIDO (módulo 11)
+   RUT bien formados aumentan credibilidad; siguen siendo ficticios.
+   =========================================================================== */
+function dvRut(num){let s=1,m=0;while(num>0){s=(s+num%10*(9-m++%6))%11;num=Math.floor(num/10);}return s?String(s-1):'K';}
+function genRut(){const n=ri(6000000,24000000);return n.toLocaleString('es-CL')+'-'+dvRut(n);}
+
+/* ===========================================================================
+   3 · DICCIONARIOS PARA DATOS SINTÉTICOS COHERENTES
+   =========================================================================== */
+const NOMBRES=['Juan','María','Pedro','Carla','Luis','Rosa','José','Ana','Diego','Marta','Felipe','Sofía','Andrés','Paula','Jorge','Elena','Ramón','Ivonne','Sergio','Claudia'];
+const APELLIDOS=['González','Muñoz','Rojas','Díaz','Pérez','Soto','Contreras','Silva','Martínez','Sepúlveda','Torres','Fuentes','Araya','Vergara','Castro','Reyes','Gutiérrez','Morales','Vega','Tapia'];
+const RAZONES=['Comercial','Inversiones','Distribuidora','Servicios','Constructora','Alimentos','Transportes','Automotriz','Ferretería','Panificadora','Agrícola','Textil'];
+const RSUFIJO=['Ltda.','SpA','S.A.','EIRL','y Cía. Ltda.'];
+const GIROS=[['Almacén / minimarket','471000'],['Restaurant','561000'],['Ferretería','475200'],['Peluquería','960201'],['Taller mecánico','452001'],['Farmacia','477310'],['Panadería','107100'],['Botillería','477230'],['Consultora','702000'],['Bazar','477890'],['Carnicería','472200'],['Constructora','410010']];
+const GIRO_ALCOHOL=['Botillería','Restaurant con patente de alcoholes','Depósito de bebidas alcohólicas','Bar / pub'];
+const CALLES=['Av. Los Aromos','Calle Esperanza','Pasaje El Roble','Av. Central','Calle Colón','Los Carrera','Av. Portales','Calle Prat','Camino El Sauce','Av. Manuel Rodríguez'];
+const SOC_INVERSION=['Inversiones','Rentas','Capitales','Patrimonial','Inmobiliaria e Inversiones'];
+
+function nombrePersona(){return pick(NOMBRES)+' '+pick(APELLIDOS)+' '+pick(APELLIDOS);}
+function razonSocial(){return pick(RAZONES)+' '+pick(APELLIDOS)+' '+pick(RSUFIJO);}
+function direccion(){return pick(CALLES)+' '+ri(50,3800);}
+
+/* ===========================================================================
+   4 · GENERACIÓN DEL MODELO DE DATOS SINTÉTICO
+   Se construyen segmentos con tamaños EXACTOS para que las tarjetas de M1
+   muestren números coherentes con la cartera (no hay cifras "de adorno").
+
+   Composición objetivo (según prompt):
+     640 roles · brecha SII 74 · riesgo <180d 23 · prescritas 9 ·
+     inconsistencia capital 38 · sociedades inversión sin patente 11 ·
+     alcoholes con deuda 6 · impagas recuperables 145 · al día ~380.
+   =========================================================================== */
+function generarDatos(){
+  const roles=[], cuotas=[], registrosSII=[];
+  let idCuota=1, nrol=3000;
+
+  /* Fabrica un contribuyente (denormalizado en el rol para render simple) */
+  function nuevoContribuyente(tipoForzado){
+    const juridica = tipoForzado ? tipoForzado==='juridica' : chance(.45);
+    return {
+      rut:genRut(),
+      razon_social: juridica?razonSocial():nombrePersona(),
+      tipo: juridica?'juridica':'natural',
+      fallecido:false
+    };
+  }
+
+  /* Crea un rol + su(s) cuota(s) según parámetros del segmento */
+  function nuevoRol(opts){
+    opts=opts||{};
+    const c=opts.contribuyente||nuevoContribuyente();
+    const g=opts.alcohol?[pick(GIRO_ALCOHOL),'110000']:pick(GIROS);
+    const capMun=opts.capital||ri(3,220)*1000000;                 // capital propio base municipal
+    // Inconsistencia de capital propio municipal vs SII (segmento 38)
+    const capSII = opts.inconsistente ? Math.round(capMun*(1+ (chance(.5)?1:-1)*(.35+rnd()*.9))) : capMun;
+    const dirComercial=opts.direccion||direccion();               // domicilio comercial (padrón)
+    const dirSII = chance(.35)?direccion():dirComercial;          // domicilio registrado ante el SII
+    const rol={
+      numero_rol:String(nrol++),
+      rut_contribuyente:c.rut,
+      contribuyente:c,
+      tipo_patente: opts.alcohol?'alcoholes':pick(['comercial','comercial','comercial','industrial','profesional']),
+      giro:g[0], codigo_actividad_sii:g[1],
+      direccion:dirComercial,
+      domicilio_sii:dirSII,   // en ~35% difiere del comercial (contraste M5)
+      uso_suelo_ok: !opts.ruido_dir,
+      estado: opts.estado_rol||'vigente',
+      fecha_otorgamiento: addAnios(HOY,-ri(1,14)),
+      capital_propio_municipal:capMun,
+      capital_propio_sii:capSII,
+      inconsistente_capital: !!opts.inconsistente,
+      ruido: opts.ruido||null,
+      tasa_aplicada:'2,5 x 1.000 (art. 24 DL 3.063)'
+    };
+    roles.push(rol);
+    return rol;
+  }
+
+  /* Crea una cuota atómica anclada por su vencimiento (define el reloj) */
+  function nuevaCuota(rol,periodo,venc,estado,monto){
+    const fPresc = addAnios(venc,3);                              // plazo 3 años (art. 2521 CC)
+    const dias = diffDias(fPresc,HOY);                            // días a prescripción
+    let est=estado;
+    if(est==='impaga' && dias<0) est='prescrita';                // prescrita por omisión
+    cuotas.push({
+      id:idCuota++, numero_rol:rol.numero_rol, rut:rol.contribuyente.rut,
+      contribuyente:rol.contribuyente.razon_social, tipo_patente:rol.tipo_patente,
+      periodo, monto, fecha_vencimiento:venc, fecha_prescripcion:fPresc,
+      dias_a_prescripcion:dias, estado:est,
+      hito_interrupcion:null
+    });
+  }
+
+  /* Genera un vencimiento aleatorio dentro de un rango [aniosMin,aniosMax] atrás */
+  function vencEntre(aMin,aMax){
+    const dTotal=ri(Math.round(aMin*365),Math.round(aMax*365));
+    return new Date(HOY.getTime()-dTotal*MS_DIA);
+  }
+  const periodoDe=(f)=> f.getFullYear()+'-S'+(f.getMonth()<6?1:2);
+
+  /* ---- 4.1 · SEGMENTO "AL DÍA" (~380 roles, cuotas pagadas + historial) ---- */
+  for(let i=0;i<380;i++){
+    const r=nuevoRol({});
+    // 1 a 2 cuotas históricas pagadas
+    const nq=ri(1,2);
+    for(let q=0;q<nq;q++){
+      const v=vencEntre(.4+q, 1.4+q);
+      nuevaCuota(r,periodoDe(v),v,'pagada',ri(45,900)*1000);
+    }
+  }
+
+  /* ---- 4.2 · IMPAGAS RECUPERABLES (145 cuotas, verde/ámbar)
+       Rango acotado a [.5,2.4] años para que NINGUNA caiga bajo 180 días:
+       así el corte rojo <180 lo componen exactamente las 23 del segmento 4.3. ---- */
+  for(let i=0;i<145;i++){
+    const r=nuevoRol({estado_rol: chance(.85)?'vigente':'provisoria'});
+    const v=vencEntre(.5,2.4);                                    // dias a prescripción ≥ ~219
+    nuevaCuota(r,periodoDe(v),v,'impaga',ri(60,1200)*1000);
+  }
+
+  /* ---- 4.3 · RIESGO <180 DÍAS (exactamente 23, rojo)
+       Banda interior 10–165 (lejos de los bordes 0 y 180) para que el redondeo
+       por año bisiesto no saque ninguna del rango: así la tarjeta M1 marca 23
+       de forma estable ante cualquier corrimiento del PRNG. ---- */
+  for(let i=0;i<23;i++){
+    const r=nuevoRol({});
+    const dObjetivo=ri(10,165);
+    const v=new Date(addAnios(HOY,-3).getTime()+dObjetivo*MS_DIA);
+    nuevaCuota(r,periodoDe(v),v,'impaga',ri(80,1400)*1000);
+  }
+
+  /* ---- 4.4 · PRESCRITAS POR OMISIÓN (exactamente 9, negro) ---- */
+  for(let i=0;i<9;i++){
+    const r=nuevoRol({estado_rol:'vigente'});
+    const dPasado=ri(20,900);                                     // prescribió hace 20..900 días
+    const v=new Date(addAnios(HOY,-3).getTime()-dPasado*MS_DIA);
+    nuevaCuota(r,periodoDe(v),v,'impaga',ri(90,1600)*1000);       // se marcará 'prescrita'
+  }
+
+  /* ---- 4.5 · ALCOHOLES CON DEUDA (exactamente 6) ---- */
+  for(let i=0;i<6;i++){
+    const r=nuevoRol({alcohol:true});
+    const v=vencEntre(.3,2.2);
+    nuevaCuota(r,periodoDe(v),v,'impaga',ri(300,2200)*1000);
+  }
+
+  /* ---- 4.6 · INCONSISTENCIA CAPITAL PROPIO (exactamente 38 roles) ---- */
+  for(let i=0;i<38;i++){
+    const r=nuevoRol({inconsistente:true});
+    const v=vencEntre(.5,2.0);
+    nuevaCuota(r,periodoDe(v),v, chance(.5)?'impaga':'pagada', ri(120,1800)*1000);
+    // El registro SII correspondiente (con capital distinto) alimenta el contraste
+    registrosSII.push({
+      rut:r.contribuyente.rut, capital_propio_declarado:r.capital_propio_sii,
+      codigo_actividad:r.codigo_actividad_sii, domicilio_registrado:direccion(),
+      periodo:'2026-05', tiene_rol:true, tipo:'inconsistencia'
+    });
+  }
+
+  /* ---- 4.7 · RUIDO ADMINISTRATIVO (~60 roles: fallecidos, duplicados, etc.) ---- */
+  const RUIDOS=['fallecido_con_rol_activo','direccion_inexistente','empresa_sin_termino_giro','rol_duplicado'];
+  for(let i=0;i<60;i++){
+    const tipoR=pick(RUIDOS);
+    const c=nuevoContribuyente(tipoR==='empresa_sin_termino_giro'?'juridica':null);
+    if(tipoR==='fallecido_con_rol_activo') c.fallecido=true;
+    const r=nuevoRol({contribuyente:c, ruido:tipoR, ruido_dir:tipoR==='direccion_inexistente',
+      direccion: tipoR==='direccion_inexistente'?'Calle inexistente s/n':undefined});
+    const v=vencEntre(.4,2.4);
+    nuevaCuota(r,periodoDe(v),v, chance(.5)?'impaga':'pagada', ri(50,700)*1000);
+  }
+
+  /* ---- 4.8 · BRECHA DE PADRÓN: 74 RUT en archivo SII SIN rol de patente ---- */
+  for(let i=0;i<74;i++){
+    const c=nuevoContribuyente(chance(.4)?'juridica':'natural');
+    const g=pick(GIROS);
+    registrosSII.push({
+      rut:c.rut, razon_social:c.razon_social,
+      capital_propio_declarado:ri(4,180)*1000000,
+      codigo_actividad:g[1], giro:g[0],
+      domicilio_registrado:direccion(),
+      fecha_inicio_actividades: fmtFecha(addAnios(HOY,-ri(1,6))),
+      periodo:'2026-05', tiene_rol:false, tipo:'brecha'
+    });
+  }
+
+  /* ---- 4.9 · SOCIEDADES DE INVERSIÓN con domicilio SII en la comuna sin patente
+       (11) — POTENCIAL brecha: jurisprudencia CS dividida sobre si la sociedad
+       de inversión PASIVA está gravada (CS 2022 no / CS dic-2025 sí). Se rotula
+       como "potencial", no como brecha cerrada. [Corrección jurídica ④] ---- */
+  for(let i=0;i<11;i++){
+    const c={rut:genRut(), razon_social:pick(SOC_INVERSION)+' '+pick(APELLIDOS)+' '+pick(RSUFIJO), tipo:'juridica', fallecido:false};
+    registrosSII.push({
+      rut:c.rut, razon_social:c.razon_social,
+      capital_propio_declarado:ri(50,1200)*1000000,
+      codigo_actividad:'642000', giro:'Sociedad de inversión',
+      domicilio_registrado:direccion(),
+      fecha_inicio_actividades: fmtFecha(addAnios(HOY,-ri(2,9))),
+      periodo:'2026-05', tiene_rol:false, tipo:'potencial_inversion'
+    });
+  }
+
+  return {roles,cuotas,registrosSII};
+}
+
+/* ===========================================================================
+   5 · ESTADO GLOBAL Y PERSISTENCIA
+   - Datos base: deterministas desde semilla (se regeneran en cada carga).
+   - Estado mutable (convenios suscritos): localStorage, se fusiona sobre la base.
+   =========================================================================== */
+const DB=generarDatos();
+
+function cargarConvenios(){try{return JSON.parse(localStorage.getItem(NS+'convenios')||'{}');}catch(e){return {};}}
+function guardarConvenios(o){localStorage.setItem(NS+'convenios',JSON.stringify(o));}
+let CONVENIOS=cargarConvenios();     // { idCuota: {fecha, fecha_prescripcion_nueva} }
+
+/* Aplica los convenios persistidos sobre las cuotas base (reinicia el reloj) */
+function aplicarConvenios(){
+  DB.cuotas.forEach(c=>{
+    const cv=CONVENIOS[c.id];
+    if(cv){
+      c.estado='convenida';
+      c.hito_interrupcion='reconocimiento';
+      c.fecha_prescripcion=new Date(cv.fecha_prescripcion_nueva);
+      c.dias_a_prescripcion=diffDias(c.fecha_prescripcion,HOY);
+      c.fecha_convenio=new Date(cv.fecha);
+    }
+  });
+}
+aplicarConvenios();
+
+/* ===========================================================================
+   5.b · ACTOS y AVISOS — TABLAS SEPARADAS (jamás se combinan)
+   ACTO = con efecto jurídico (giro, notificación, resolución, convenio...).
+   AVISO = sin efecto jurídico (whatsapp, email, sms). Se muestran en dos
+   líneas de tiempo paralelas y distintas en la ficha (M5).
+   =========================================================================== */
+const FUNCIONARIOS=['P. Rojas · Rentas','M. Díaz · Tesorería','J. Soto · Rentas','C. Fuentes · Rentas'];
+const PLANTILLAS_AVISO=['Recordatorio de vencimiento','Aviso ciego de patente','Segundo aviso','Invitación a regularizar'];
+let ACTO_SEQ=1, AVISO_SEQ=1, FOLIO_SEQ=1000;
+DB.actos=[]; DB.avisos=[];
+function generarActosAvisos(){
+  DB.cuotas.forEach(c=>{
+    // Pocas cuotas pagadas conservan historial visible
+    if(c.estado==='pagada' && !chance(.12)) return;
+    // ACTO: giro de patente (siempre existe) — ~30 días antes del vencimiento
+    DB.actos.push({id:ACTO_SEQ++, id_cuota:c.id, numero_rol:c.numero_rol, rut:c.rut,
+      tipo:'giro', fecha:new Date(c.fecha_vencimiento.getTime()-30*MS_DIA),
+      folio:'G-'+(FOLIO_SEQ++), funcionario:pick(FUNCIONARIOS), firmado:true,
+      texto:'Giro de patente período '+c.periodo});
+    if(c.estado==='impaga'||c.estado==='prescrita'||c.estado==='convenida'){
+      // ACTO: notificación de cobro (efecto jurídico — prueba diligencia)
+      if(chance(.7)) DB.actos.push({id:ACTO_SEQ++, id_cuota:c.id, numero_rol:c.numero_rol, rut:c.rut,
+        tipo:'notificacion', fecha:new Date(c.fecha_vencimiento.getTime()+ri(20,120)*MS_DIA),
+        folio:'N-'+(FOLIO_SEQ++), funcionario:pick(FUNCIONARIOS), firmado:true,
+        texto:'Notificación de deuda impaga'});
+      // AVISOS (sin efecto jurídico) — canal informal
+      const nAv=ri(1,3);
+      for(let i=0;i<nAv;i++) DB.avisos.push({id:AVISO_SEQ++, id_cuota:c.id, numero_rol:c.numero_rol, rut:c.rut,
+        canal:pick(['whatsapp','email','sms']), plantilla:pick(PLANTILLAS_AVISO),
+        fecha_envio:new Date(c.fecha_vencimiento.getTime()+ri(5,200)*MS_DIA),
+        estado_entrega:pick(['entregado','entregado','fallido','pendiente']), apertura:chance(.5)});
+    }
+    // ACTO: convenio (para cuotas ya convenidas por persistencia)
+    if(c.estado==='convenida') DB.actos.push({id:ACTO_SEQ++, id_cuota:c.id, numero_rol:c.numero_rol, rut:c.rut,
+      tipo:'convenio', fecha:c.fecha_convenio||HOY, folio:'C-'+(FOLIO_SEQ++),
+      funcionario:pick(FUNCIONARIOS), firmado:true,
+      texto:'Convenio de pago suscrito — reconocimiento de deuda (art. 2518 CC)'});
+  });
+}
+generarActosAvisos();
+
+/* Compuertas de cobranza aplicables a un contribuyente, con su base legal.
+   Incorpora correcciones ②(art. 65 ñ), ③(art. 30) y ⑥(art. 31). */
+function compuertasDetalle(rol, cuotasRol){
+  const conDeuda=cuotasRol.some(c=>c.estado==='impaga'||c.estado==='prescrita');
+  const sobreUmbral=cuotasRol.some(c=>c.estado==='impaga' && c.monto>=800000);
+  const esAlcohol=rol.tipo_patente==='alcoholes';
+  return [
+    {c:'Renovación de patente', base:'No se otorga patente definitiva ni provisoria con deuda pendiente.',
+      estado: conDeuda?'Activa · retención en renovación (vence marzo)':'Sin deuda · no aplica', on:conDeuda},
+    {c:'Transferencia del establecimiento', base:'Art. 30 DL 3.063 — el nuevo dueño debe anotar la transferencia y responde de la patente del semestre en curso.',
+      estado:'Disponible', on:true},
+    {c:'Administrador o regente', base:'Art. 31 DL 3.063 — responden del pago los administradores o regentes del establecimiento (no todo representante — CS mar-2026).',
+      estado:'Disponible', on:true},
+    {c:'Certificado de no deuda', base:'Ordenanza municipal.',
+      estado:'Requiere configuración', on:false},
+    {c:'Patente de alcoholes', base:'Renovación con acuerdo del concejo — Ley 18.695 art. 65 letra ñ).',
+      estado: esAlcohol?'Aplica · requiere acuerdo del concejo':'No aplica', on:esAlcohol},
+    {c:'Cobro judicial', base:'Certificado del secretario municipal como título ejecutivo.',
+      estado: sobreUmbral?'Sobre umbral · disponible':'Bajo umbral', on:sobreUmbral},
+    {c:'Clausura', base:'Art. 58 DL 3.063.',
+      estado:'Solo propuesta — decide el alcalde', on:false, propuesta:true}
+  ];
+}
+
+/* ===========================================================================
+   6 · MÉTRICAS DERIVADAS (alimentan las tarjetas de M1 — sin cifras de adorno)
+   =========================================================================== */
+function metricas(){
+  const cuotasVivas=DB.cuotas.filter(c=>c.estado==='impaga'||c.estado==='prescrita'||c.estado==='convenida');
+  return {
+    brecha: DB.registrosSII.filter(r=>r.tipo==='brecha').length,
+    potencialInversion: DB.registrosSII.filter(r=>r.tipo==='potencial_inversion').length,
+    riesgo: DB.cuotas.filter(c=>c.estado==='impaga' && c.dias_a_prescripcion>=0 && c.dias_a_prescripcion<180).length,
+    prescritas: DB.cuotas.filter(c=>c.estado==='prescrita').length,
+    inconsistencia: DB.roles.filter(r=>r.inconsistente_capital).length,
+    alcoholesDeuda: DB.cuotas.filter(c=>c.tipo_patente==='alcoholes' && (c.estado==='impaga'||c.estado==='prescrita')).length,
+    impagas: DB.cuotas.filter(c=>c.estado==='impaga').length,
+    roles: DB.roles.length,
+    cuotas: DB.cuotas.length
+  };
+}
+
+/* ===========================================================================
+   7 · CLASIFICACIÓN DE SEMÁFORO (uso exclusivo prescripción)
+   =========================================================================== */
+function semaforo(c){
+  // La prescripción solo aplica a cuotas no pagadas: en pagadas el reloj es
+  // irrelevante y mostrarlo confunde al funcionario. Se muestra "—".
+  if(c.estado==='pagada') return {cls:'na',txt:'—'};
+  if(c.estado==='prescrita' || c.dias_a_prescripcion<0) return {cls:'negro',txt:'PRESCRITA'};
+  if(c.dias_a_prescripcion<180) return {cls:'rojo',txt:c.dias_a_prescripcion+' días'};
+  if(c.dias_a_prescripcion<=365) return {cls:'ambar',txt:c.dias_a_prescripcion+' días'};
+  return {cls:'verde',txt:c.dias_a_prescripcion+' días'};
+}
+/* Compuertas activas por cuota (resumen; detalle legal completo en M5) */
+function compuertas(c){
+  const g=[];
+  if(c.estado==='impaga'||c.estado==='prescrita'){g.push('Renovación');}
+  if(c.tipo_patente==='alcoholes'){g.push('Alcoholes·concejo');}
+  if(c.monto>=800000 && c.estado==='impaga'){g.push('Cobro judicial');}
+  return g;
+}
+
+/* ===========================================================================
+   8 · ÍCONOS (outline 2px, SVG inline — sin librerías)
+   =========================================================================== */
+const IC={
+  panel:'<path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/>',
+  cartera:'<path d="M3 6h18M3 12h18M3 18h18"/>',
+  reloj:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  ficha:'<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/>',
+  informe:'<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h5M10 17h5"/>',
+  carga:'<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+  chat:'<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
+  conv:'<path d="M4 7h16v10H4z"/><path d="M4 11h16"/>',
+  escudo:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  lev:'<path d="M12 5v14M5 12h14"/>',
+  guion:'<path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h8"/>',
+  brecha:'<path d="M12 3v6M12 15v6M5 12h4M15 12h4"/><circle cx="12" cy="12" r="2"/>',
+  alerta:'<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+  balanza:'<path d="M12 3v18M7 21h10M5 7h14M5 7l-2 6a3 3 0 0 0 6 0zM19 7l2 6a3 3 0 0 1-6 0z"/>',
+  cash:'<path d="M3 6h18v12H3z"/><circle cx="12" cy="12" r="3"/>',
+  induccion:'<path d="M12 4 2 9l10 5 10-5-10-5Z"/><path d="M6 11v4c0 1.3 2.7 3 6 3s6-1.7 6-3v-4"/>',
+  ayuda:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 0 1 4.7 1.1c0 1.7-2.3 2-2.3 3.6"/><path d="M12 17.2h.01"/>'
+};
+/* Todos los íconos generados son decorativos (siempre acompañan texto): aria-hidden */
+function svg(path,cls){return '<svg class="'+(cls||'')+'" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+path+'</svg>';}
+
+/* ===========================================================================
+   9 · DEFINICIÓN DE MÓDULOS Y RUTEO
+   =========================================================================== */
+const MODULOS=[
+  {id:'induccion', ic:IC.induccion, t:'Inducción',       ready:true, grupo:'Empezar aquí'},
+  {id:'m1', ic:IC.panel,   t:'Panel de brecha',        ready:true, grupo:'Demostración'},
+  {id:'m3', ic:IC.cartera, t:'Cartera por cuota',      ready:true, grupo:'Demostración'},
+  {id:'m4', ic:IC.reloj,   t:'Motor de prescripción',  ready:true, grupo:'Demostración'},
+  {id:'m5', ic:IC.ficha,   t:'Ficha del contribuyente',ready:true, grupo:'Demostración'},
+  {id:'m6', ic:IC.informe, t:'Informe de antecedentes',ready:true, grupo:'Demostración'},
+  {id:'m2', ic:IC.carga,   t:'Carga y conciliación',   ready:true, grupo:'Demostración'},
+  {id:'m7', ic:IC.chat,    t:'Comunicaciones',          ready:true, grupo:'Demostración'},
+  {id:'m8', ic:IC.conv,    t:'Convenio de pago',        ready:true, grupo:'Demostración'},
+  {id:'m9', ic:IC.escudo,  t:'Transparencia',           ready:true, grupo:'Demostración'},
+  {id:'m10',ic:IC.lev,     t:'Modo levantamiento',      ready:true, grupo:'Demostración'},
+  {id:'m11',ic:IC.guion,   t:'Guion de demo',           ready:true, grupo:'Demostración'},
+  {id:'ayuda', ic:IC.ayuda, t:'Ayuda',                  ready:true, grupo:'Soporte'}
+];
+let RUTA='induccion';   // pantalla de inicio: Inducción (el guion de demo salta a M1 cuando toca)
+
+/* ---- Bitácora de auditoría (M9): registro en memoria de las últimas acciones ---- */
+const AUDIT=[];
+function hhmm(d){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');}
+function logAudit(accion,detalle){
+  const d=new Date();
+  AUDIT.unshift({ts:fmtFecha(d)+' '+hhmm(d), accion, detalle:detalle||'', usuario:'demo@villaesperanza'});
+  if(AUDIT.length>200)AUDIT.pop();
+  if(RUTA==='m9')render();   // refresca la bitácora si está visible
+}
+// Semilla de historial para que la bitácora no aparezca vacía
+['Inicio de sesión','Consulta de cartera por cuota','Generación de informe de antecedentes','Carga de archivo SII','Exportación de brecha'].forEach((a,i)=>{
+  AUDIT.push({ts:fmtFecha(addAnios(HOY,0))+' 0'+(8+i)+':1'+i+':00', accion:a, detalle:'', usuario:'demo@villaesperanza'});
+});
+
+function pintarNav(){
+  const m=metricas();
+  const badges={m1:m.brecha};   // insignia visible en el módulo de entrada
+  let grupoActual=null;
+  document.getElementById('nav-list').innerHTML=MODULOS.map(mo=>{
+    let head='';
+    if(mo.grupo!==grupoActual){grupoActual=mo.grupo;head='<div class="nav-group">'+grupoActual+'</div>';}
+    const badge = badges[mo.id]!==undefined ? '<span class="badge">'+badges[mo.id]+'</span>':'';
+    return head+'<div class="nav-item '+(mo.id===RUTA?'active':'')+(mo.ready?'':' soon')+'" title="'+mo.t+'" tabindex="0" role="button" aria-current="'+(mo.id===RUTA?'page':'false')+'" onclick="ir(\''+mo.id+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();ir(\''+mo.id+'\')}">'+
+      svg(mo.ic,'ico')+'<span class="t">'+mo.t+'</span>'+badge+'</div>';
+  }).join('');
+}
+function ir(id){const mo=MODULOS.find(m=>m.id===id);RUTA=id;if(mo)AUDIT.unshift({ts:fmtFecha(new Date())+' '+hhmm(new Date()),accion:'Navegación · '+mo.t,detalle:id.toUpperCase(),usuario:'demo@villaesperanza'});pintarNav();render();document.getElementById('main').scrollTop=0;}
+
+/* ===========================================================================
+   10 · MODAL
+   =========================================================================== */
+function abrirModal(titulo,html){document.getElementById('modal-title').innerHTML=titulo;document.getElementById('modal-body').innerHTML=html;document.getElementById('modal-bg').classList.add('open');}
+function cerrarModal(){document.getElementById('modal-bg').classList.remove('open');}
+document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')cerrarModal();});
+
+/* ===========================================================================
+   11 · RENDER PRINCIPAL
+   =========================================================================== */
+function render(){
+  const v=document.getElementById('view');
+  if(RUTA==='m1') v.innerHTML=vistaM1();
+  else if(RUTA==='m3') v.innerHTML=vistaM3();
+  else if(RUTA==='m4') v.innerHTML=vistaM4();
+  else if(RUTA==='m5') v.innerHTML=vistaM5();
+  else if(RUTA==='m6') v.innerHTML=vistaM6();
+  else if(RUTA==='m2') v.innerHTML=vistaM2();
+  else if(RUTA==='m7') v.innerHTML=vistaM7();
+  else if(RUTA==='m8') v.innerHTML=vistaM8();
+  else if(RUTA==='m9') v.innerHTML=vistaM9();
+  else if(RUTA==='m10') v.innerHTML=vistaM10();
+  else if(RUTA==='m11') v.innerHTML=vistaM11();
+  else if(RUTA==='induccion') v.innerHTML=vistaInduccion();
+  else if(RUTA==='ayuda') v.innerHTML=vistaAyuda();
+  else v.innerHTML=vistaSoon();
+  if(RUTA==='m3') montarM3();
+  if(RUTA==='m4') montarM4();
+  if(RUTA==='m5') montarM5();
+  if(RUTA==='m6') montarM6();
+  if(RUTA==='m2') montarM2();
+  if(RUTA==='m7') montarM7();
+  if(RUTA==='m8') montarM8();
+}
+/* Navegación con contexto: abrir la ficha de un RUT / el informe de una cuota */
+function irFicha(rut){SEL_RUT=rut;cerrarModal();ir('m5');}
+function irInforme(idCuota){SEL_CUOTA=idCuota;cerrarModal();ir('m6');}
+
+/* ---------------------------------------------------------------------------
+   M1 · PANEL DE BRECHA (pantalla de entrada)
+--------------------------------------------------------------------------- */
+function vistaM1(){
+  const m=metricas();
+  const card=(n,lbl,norma,cta,cls)=>`
+    <div class="card ${cls||''}">
+      <div class="k-ico">${svg(IC.alerta)}</div>
+      <div class="k-num">${n}</div>
+      <div class="k-lbl">${lbl}</div>
+      <div class="k-norm">${norma}</div>
+      ${cta?`<button class="k-cta" onclick="${cta}">Ver los ${n} →</button>`:''}
+    </div>`;
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M1 · Pantalla de entrada</div>
+      <div class="view-title">¿Cuántos son en su comuna?</div>
+      <div class="view-sub">Cuatro brechas que hoy nadie mira, con la norma que las sustenta. Los números salen de la propia cartera sintética de ${COMUNA}, no de un supuesto.</div>
+    </div>
+  </div>
+
+  <div class="cards">
+    ${card(m.brecha,'Brecha de padrón','RUT con actividad iniciada en la comuna en el archivo del SII y <b>sin rol de patente</b>.<br><span class="note">Art. 24 DL 3.063 — el capital propio lo declara el contribuyente al SII (Operación Renta); la municipalidad recibe la nómina hacia mayo.</span>','verLosBrecha()','')}
+    ${card(m.riesgo,'En riesgo de prescripción','Cuotas impagas a menos de <b>180 días</b> de prescribir.<br><span class="note">Plazo 3 años: art. 2521 CC. Cómputo por cuota: Corte Suprema.</span>','verRiesgo()','accent-red')}
+    ${card(m.prescritas,'Prescritas por omisión','Cuotas cuya acción de cobro <b>ya prescribió</b> sin que se interrumpiera.<br><span class="note">Art. 2521 CC. La plata ya no es cobrable por vía ejecutiva.</span>','verPrescritas()','accent-red')}
+    ${card(m.inconsistencia,'Inconsistencia de capital','Roles cuyo capital propio municipal <b>difiere</b> del declarado al SII.<br><span class="note">Art. 24 DL 3.063 — base de cálculo de la patente.</span>','verInconsistencia()','')}
+  </div>
+
+  <div class="origin">
+    <h3>De dónde viene cada dato</h3>
+    <div class="rows">
+      <div class="r">${svg(IC.brecha,'')}<div><b>Archivo del SII</b> — mayo 2026 · nómina de capital propio y códigos de actividad. <span class="src">registro_sii · 2026-05</span></div></div>
+      <div class="r">${svg(IC.cartera,'')}<div><b>Padrón municipal</b> — ${m.roles} roles de patente vigentes/históricos. <span class="src">padrón · rol 3.000–${3000+m.roles}</span></div></div>
+      <div class="r">${svg(IC.reloj,'')}<div><b>Cartera por cuota</b> — ${m.cuotas} cuotas, cada una con su propio reloj de prescripción. <span class="src">cuota · unidad atómica</span></div></div>
+      <div class="r">${svg(IC.balanza,'')}<div><b>Marco legal</b> — DL 3.063, Código Civil, Ley 19.880, Ley 21.719. <span class="src">citado en pantalla</span></div></div>
+    </div>
+  </div>
+
+  <div class="origin" style="border-color:#F4E0B4;background:#FFFCF5">
+    <div class="r" style="display:flex;gap:9px;font-size:12.5px;color:#7A5A10;align-items:flex-start">
+      ${svg(IC.alerta,'')}
+      <div><b>Además:</b> ${m.potencialInversion} sociedades de inversión con domicilio SII en la comuna sin patente — <b>potencial</b> brecha.
+      <span class="note" style="color:#8A5C00">La Corte Suprema está dividida sobre si la sociedad de inversión pasiva está gravada (CS 2022: no; CS dic-2025: sí). Se muestra como potencial, no como brecha cerrada.</span></div>
+    </div>
+  </div>`;
+}
+
+/* Modales "Ver los N" de M1 */
+function tablaBrecha(){
+  const rows=DB.registrosSII.filter(r=>r.tipo==='brecha');
+  return `<p class="view-sub" style="margin-bottom:12px">${rows.length} RUT en el archivo del SII con actividad iniciada en la comuna y <b>sin rol de patente</b> en el padrón municipal.</p>
+  <div class="table-wrap"><div class="tbl-scroll" style="max-height:52vh"><table>
+  <thead><tr><th>RUT</th><th>Razón social / nombre</th><th>Giro (cód. SII)</th><th>Domicilio SII</th><th>Inicio actividades</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><td class="mono">${r.rut}</td><td>${r.razon_social}</td><td>${r.giro} <span class="muted mono">${r.codigo_actividad}</span></td><td>${r.domicilio_registrado}</td><td class="mono">${r.fecha_inicio_actividades}</td></tr>`).join('')}</tbody>
+  </table></div></div>
+  <div style="margin-top:12px"><button class="btn btn-blue" onclick="exportarCSV('brecha')">Exportar CSV</button> <span class="note">Fuente: archivo SII mayo 2026 (sintético).</span></div>`;
+}
+function verLosBrecha(){abrirModal('Brecha de padrón · '+metricas().brecha+' RUT sin rol',tablaBrecha());}
+function verRiesgo(){
+  const rows=DB.cuotas.filter(c=>c.estado==='impaga'&&c.dias_a_prescripcion>=0&&c.dias_a_prescripcion<180).sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion);
+  abrirModal('En riesgo de prescripción · '+rows.length+' cuotas', tablaCuotasSimple(rows));
+}
+function verPrescritas(){
+  const rows=DB.cuotas.filter(c=>c.estado==='prescrita').sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion);
+  abrirModal('Prescritas por omisión · '+rows.length+' cuotas', tablaCuotasSimple(rows));
+}
+function verInconsistencia(){
+  const rows=DB.roles.filter(r=>r.inconsistente_capital);
+  const html=`<p class="view-sub" style="margin-bottom:12px">${rows.length} roles con diferencia entre el capital propio usado por el municipio y el declarado al SII.</p>
+  <div class="table-wrap"><div class="tbl-scroll" style="max-height:52vh"><table>
+  <thead><tr><th>Rol</th><th>Contribuyente</th><th class="num">Capital municipal</th><th class="num">Capital SII</th><th class="num">Diferencia</th></tr></thead>
+  <tbody>${rows.map(r=>{const dif=r.capital_propio_sii-r.capital_propio_municipal;return `<tr><td class="mono">${r.numero_rol}</td><td>${r.contribuyente.razon_social}</td><td class="num">${fmtCLP(r.capital_propio_municipal)}</td><td class="num">${fmtCLP(r.capital_propio_sii)}</td><td class="num" style="color:${dif>0?'#B4232C':'#0A7C5A'}">${dif>0?'+':''}${fmtCLP(dif)}</td></tr>`;}).join('')}</tbody>
+  </table></div></div>`;
+  abrirModal('Inconsistencia de capital propio · '+rows.length+' roles',html);
+}
+function tablaCuotasSimple(rows){
+  return `<div class="table-wrap"><div class="tbl-scroll" style="max-height:56vh"><table>
+  <thead><tr><th>Rol</th><th>Contribuyente</th><th>Período</th><th class="num">Monto</th><th>Vencimiento</th><th>Días a prescripción</th></tr></thead>
+  <tbody>${rows.map(c=>{const s=semaforo(c);return `<tr><td class="mono">${c.numero_rol}</td><td>${c.contribuyente}</td><td class="mono">${c.periodo}</td><td class="num">${fmtCLP(c.monto)}</td><td class="mono">${fmtFecha(c.fecha_vencimiento)}</td><td><span class="sem ${s.cls}"><span class="d"></span>${s.txt}</span></td></tr>`;}).join('')}</tbody>
+  </table></div></div>`;
+}
+
+/* ---------------------------------------------------------------------------
+   M3 · CARTERA POR CUOTA (una fila = una cuota; orden por defecto: días asc)
+--------------------------------------------------------------------------- */
+let M3_ORD={col:'dias_a_prescripcion',dir:1};
+function vistaM3(){
+  const m=metricas();
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M3 · Unidad atómica: la cuota</div>
+      <div class="view-title">Cartera por cuota</div>
+      <div class="view-sub">Una fila por cuota, no por contribuyente. El sistema ordena primero lo que está a punto de morir, no lo que más plata vale.</div>
+    </div>
+    <button class="btn btn-blue" onclick="exportarCSV('cartera')">Exportar CSV</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="field"><label>Tipo de patente</label>
+      <select id="f-tipo"><option value="">Todas</option><option>comercial</option><option>industrial</option><option>profesional</option><option>alcoholes</option></select></div>
+    <div class="field"><label>Estado</label>
+      <select id="f-estado"><option value="">Todos</option><option>impaga</option><option>pagada</option><option>convenida</option><option>prescrita</option></select></div>
+    <div class="field"><label>Rango de prescripción</label>
+      <select id="f-presc"><option value="">Todos</option><option value="negro">Prescrita (negro)</option><option value="rojo">&lt;180 días (rojo)</option><option value="ambar">180–365 (ámbar)</option><option value="verde">&gt;365 (verde)</option></select></div>
+    <div class="field"><label>Monto mínimo</label>
+      <input type="number" id="f-monto" placeholder="0" style="width:110px"></div>
+    <div class="field"><label>Buscar rol / contribuyente</label>
+      <input type="text" id="f-q" placeholder="rol o nombre" style="width:180px"></div>
+    <span class="count-pill" id="m3-count"></span>
+  </div>
+
+  <div class="table-wrap">
+    <div class="tbl-scroll"><table id="m3-table">
+      <thead><tr>
+        ${th('numero_rol','Rol')}${th('contribuyente','Contribuyente')}${th('periodo','Período')}
+        ${th('monto','Monto','num')}${th('fecha_vencimiento','Vencimiento')}
+        ${th('dias_a_prescripcion','Días a prescripción')}${th('estado','Estado')}
+        <th>Compuertas</th>
+      </tr></thead>
+      <tbody id="m3-body"></tbody>
+    </table></div>
+  </div>
+  <p class="note" style="margin-top:10px">Semáforo — verde &gt;365 días · ámbar 180–365 · rojo &lt;180 · negro = prescrita. Uso exclusivo del estado de prescripción.</p>`;
+}
+function th(col,lbl,cls){
+  const active=M3_ORD.col===col;
+  const arrow=active?(M3_ORD.dir>0?' ▲':' ▼'):'';
+  return `<th class="sortable ${cls||''}" onclick="ordenarM3('${col}')">${lbl}<span class="arrow">${arrow}</span></th>`;
+}
+function ordenarM3(col){if(M3_ORD.col===col)M3_ORD.dir*=-1;else{M3_ORD.col=col;M3_ORD.dir=1;}render();}
+function filasM3(){
+  const ft=val('f-tipo'),fe=val('f-estado'),fp=val('f-presc'),fm=+val('f-monto')||0,fq=(val('f-q')||'').toLowerCase();
+  let rows=DB.cuotas.filter(c=>{
+    if(ft&&c.tipo_patente!==ft)return false;
+    if(fe&&c.estado!==fe)return false;
+    if(fm&&c.monto<fm)return false;
+    if(fp&&semaforo(c).cls!==fp)return false;
+    if(fq&&!(c.numero_rol.includes(fq)||c.contribuyente.toLowerCase().includes(fq)))return false;
+    return true;
+  });
+  const col=M3_ORD.col,dir=M3_ORD.dir;
+  rows.sort((a,b)=>{let x=a[col],y=b[col];if(x instanceof Date){x=x.getTime();y=y.getTime();}if(typeof x==='string'){return x.localeCompare(y)*dir;}return (x-y)*dir;});
+  return rows;
+}
+function montarM3(){
+  ['f-tipo','f-estado','f-presc','f-monto','f-q'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',pintarFilasM3);});
+  pintarFilasM3();
+}
+function pintarFilasM3(){
+  const rows=filasM3();
+  const body=document.getElementById('m3-body');
+  // Render por string (rápido para ~800 filas; sin appends individuales)
+  body.innerHTML=rows.map(c=>{
+    const s=semaforo(c);
+    const g=compuertas(c).map(x=>`<span class="gate">${x}</span>`).join('');
+    return `<tr style="cursor:pointer" onclick="irFicha('${c.rut}')" title="Abrir ficha del contribuyente">
+      <td class="mono">${c.numero_rol}</td>
+      <td>${c.contribuyente}</td>
+      <td class="mono">${c.periodo}</td>
+      <td class="num">${fmtCLP(c.monto)}</td>
+      <td class="mono">${fmtFecha(c.fecha_vencimiento)}</td>
+      <td><span class="sem ${s.cls}"><span class="d"></span>${s.txt}</span></td>
+      <td><span class="chip ${c.estado}">${c.estado}</span></td>
+      <td>${g||'<span class="muted">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  const cnt=document.getElementById('m3-count');if(cnt)cnt.textContent=rows.length+' cuotas';
+}
+function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+
+/* ---------------------------------------------------------------------------
+   M4 · MOTOR DE PRESCRIPCIÓN
+--------------------------------------------------------------------------- */
+let M4_SEL=null;   // id de cuota seleccionada en el simulador
+function vistaM4(){
+  const vivas=DB.cuotas.filter(c=>c.estado==='impaga'||c.estado==='prescrita');
+  const t365=vivas.filter(c=>c.dias_a_prescripcion<365&&c.dias_a_prescripcion>=180).length;
+  const t180=vivas.filter(c=>c.dias_a_prescripcion<180&&c.dias_a_prescripcion>=90).length;
+  const t90 =vivas.filter(c=>c.dias_a_prescripcion<90&&c.dias_a_prescripcion>=0).length;
+  const yaP =vivas.filter(c=>c.dias_a_prescripcion<0).length;
+
+  // Opciones del simulador: impagas (por urgencia) + convenidas (para que la cuota
+  // recién convenida siga seleccionada y se vea el reloj reiniciado, no salte a otra).
+  const opciones=DB.cuotas.filter(c=>c.estado==='impaga'||c.estado==='convenida').sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion);
+  M4_SEL = M4_SEL && opciones.find(c=>c.id===M4_SEL) ? M4_SEL : (opciones[0]?opciones[0].id:null);
+
+  const nConv=Object.keys(CONVENIOS).length;
+  const rescatadas=DB.cuotas.filter(c=>c.estado==='convenida').length;
+
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M4 · El módulo de mayor valor jurídico</div>
+      <div class="view-title">Motor de prescripción</div>
+      <div class="view-sub">El reloj corre por cada cuota, no consolidado por contribuyente. El sistema muestra qué está por morir y qué ya murió.</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:16px">
+    <div class="box"><div class="cut"><div><div class="c-lbl">Corte T−365 a T−180</div><div class="c-desc">Ámbar · aún hay margen</div></div><div class="c-num" style="color:var(--amber)">${t365}</div></div>
+      <div class="cut"><div><div class="c-lbl">Corte T−180 a T−90</div><div class="c-desc">Rojo · actuar ya</div></div><div class="c-num" style="color:var(--red)">${t180}</div></div></div>
+    <div class="box"><div class="cut"><div><div class="c-lbl">Corte T−90 a T−0</div><div class="c-desc">Rojo intenso · bloqueo de cierre</div></div><div class="c-num" style="color:var(--red)">${t90}</div></div>
+      <div class="cut"><div><div class="c-lbl">Ya prescritas</div><div class="c-desc">Negro · acción de cobro perdida</div></div><div class="c-num" style="color:var(--black-chip)">${yaP}</div></div></div>
+    <div class="box legal-box" style="border-radius:12px">
+      <b>Solo dos hechos interrumpen la prescripción (art. 2518 Código Civil):</b>
+      <ol>
+        <li>Reconocimiento de la deuda por el deudor — en la práctica, <b>convenio de pago suscrito o abono parcial</b>.</li>
+        <li>Demanda judicial <b>notificada</b>.</li>
+      </ol>
+      <span class="warn">Un aviso, un correo, un WhatsApp o una carta no interrumpen la prescripción.</span>
+      <span class="cite">El plazo se computa separadamente por cada cuota (Corte Suprema). El plazo de 3 años proviene del art. 2521 del Código Civil (acciones a favor o en contra de las municipalidades por impuestos).</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="box" id="m4-sim">
+      <h3>Simulador de interrupción <span class="sim-tag">Simulado para demostración</span></h3>
+      <div class="h-sub">Seleccione una cuota, suscriba un convenio y observe reiniciarse el reloj a tres años.</div>
+      <div class="sim-row">
+        <div class="field" style="flex:1"><label>Cuota</label>
+          <select id="m4-cuota" onchange="M4_SEL=+this.value;render()">
+            ${opciones.map(c=>`<option value="${c.id}" ${c.id===M4_SEL?'selected':''}>Rol ${c.numero_rol} · ${c.periodo} · ${fmtCLP(c.monto)} · ${c.dias_a_prescripcion} días</option>`).join('')}
+          </select></div>
+      </div>
+      <div id="m4-detalle"></div>
+    </div>
+
+    <div class="box">
+      <h3>¿Por qué esto importa?</h3>
+      <div class="h-sub">La consecuencia operativa de cada corte.</div>
+      <div class="legal-box" style="margin-bottom:12px">
+        A menos de <b>90 días</b> de prescripción, cerrar un caso como incobrable exige <b>decisión documentada</b>: el sistema no deja cerrar en silencio algo que aún es rescatable. <span class="cite">Bloqueo simulado — art. 11 inc. 2 y art. 41 Ley 19.880 (resoluciones fundadas).</span>
+      </div>
+      <div class="counter-strip">
+        <div class="cs"><span class="n" id="cs-conv">${nConv}</span><span class="l">Convenios suscritos</span></div>
+        <div class="cs"><span class="n" id="cs-resc">${rescatadas}</span><span class="l">Cuotas rescatadas de prescripción</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+function montarM4(){pintarDetalleM4();}
+function pintarDetalleM4(){
+  const cont=document.getElementById('m4-detalle');if(!cont)return;
+  const c=DB.cuotas.find(x=>x.id===M4_SEL);if(!c){cont.innerHTML='<p class="muted">Sin cuotas impagas.</p>';return;}
+  const s=semaforo(c);
+  const bloqueo = c.dias_a_prescripcion>=0 && c.dias_a_prescripcion<90;
+  // Línea de tiempo: vencimiento → hoy → prescripción
+  const t0=c.fecha_vencimiento.getTime(), t1=c.fecha_prescripcion.getTime(), th_=HOY.getTime();
+  const pct=x=>Math.max(0,Math.min(100,(x-t0)/(t1-t0)*100));
+  const pHoy=Math.max(0,Math.min(100,pct(th_)));
+  const colHoy = s.cls==='negro'?'var(--black-chip)':s.cls==='rojo'?'var(--red)':s.cls==='ambar'?'var(--amber)':'var(--green)';
+  // Cuando "Hoy" queda muy cerca de "Prescribe", se ancla su rótulo a la izquierda
+  // del nodo y se omite su fecha para evitar colisión con el extremo derecho.
+  // El rótulo "Hoy" se eleva a una fila propia (top:-26) para no colisionar
+  // con "Vencimiento"/"Prescribe"; su posición horizontal se acota a [8,92]%.
+  const pHoyLbl=Math.max(8,Math.min(92,pHoy));
+  cont.innerHTML=`
+    <div class="timeline">
+      <div class="tl-track">
+        <div class="tl-line"></div>
+        <div class="tl-fill" style="width:${pHoy}%;background:${colHoy}"></div>
+        <!-- Rótulo Hoy elevado, en su propia fila -->
+        <div class="tl-lbl" style="top:-26px;left:${pHoyLbl}%;transform:translateX(-50%);color:${colHoy};font-weight:500">Hoy · ${fmtFecha(HOY)}</div>
+        <!-- Extremos -->
+        <div class="tl-node" style="left:0;background:var(--ink-soft)"></div>
+        <div class="tl-lbl" style="left:0;transform:translateX(0)">Vencimiento</div>
+        <div class="tl-date" style="left:0;transform:translateX(0)">${fmtFecha(c.fecha_vencimiento)}</div>
+        <div class="tl-node" style="left:${pHoy}%;background:${colHoy}"></div>
+        <div class="tl-node" style="left:100%;background:var(--black-chip)"></div>
+        <div class="tl-lbl" style="left:100%;transform:translateX(-100%)">Prescribe</div>
+        <div class="tl-date" style="left:100%;transform:translateX(-100%)">${fmtFecha(c.fecha_prescripcion)}</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;margin:18px 0 8px">
+      <div>
+        <div class="note">Días a prescripción</div>
+        <div class="reloj" id="m4-reloj" style="color:${colHoy}">${c.dias_a_prescripcion<0?'PRESCRITA':c.dias_a_prescripcion+' días'}</div>
+      </div>
+      <div style="margin-left:auto">
+        <span class="chip ${c.estado}">${c.estado}</span>
+        ${c.hito_interrupcion?'<span class="chip convenida" style="margin-left:6px">interrumpida · '+c.hito_interrupcion+'</span>':''}
+      </div>
+    </div>
+    ${c.estado==='convenida'
+      ? `<p class="note" style="color:#0A7C5A">✓ Convenio suscrito el ${fmtFecha(c.fecha_convenio)}. Reloj reiniciado a 3 años (art. 2518 CC — reconocimiento de deuda).</p>
+         <button class="btn btn-ghost" onclick="revertirConvenio(${c.id})">Revertir convenio (demo)</button>`
+      : bloqueo
+        ? `<div class="legal-box" style="margin-bottom:10px"><b>Cuota a menos de 90 días de prescribir.</b> Para cerrarla como incobrable se exige decisión documentada. En su lugar, lo correcto es interrumpir: <span class="cite">art. 2518 CC — reconocimiento (convenio) o demanda notificada.</span></div>
+           <button class="btn btn-blue" onclick="suscribirConvenio(${c.id})">Suscribir convenio y reiniciar reloj</button>`
+        : `<button class="btn btn-blue" onclick="suscribirConvenio(${c.id})">Suscribir convenio y reiniciar reloj</button>`
+    }`;
+}
+/* Suscribe convenio: genera reconocimiento, reinicia reloj a 3 años, persiste */
+function suscribirConvenio(id){
+  const nueva=addAnios(HOY,3);
+  CONVENIOS[id]={fecha:HOY.toISOString(),fecha_prescripcion_nueva:nueva.toISOString()};
+  guardarConvenios(CONVENIOS);
+  const c=DB.cuotas.find(x=>x.id===id);
+  c.estado='convenida';c.hito_interrupcion='reconocimiento';c.fecha_prescripcion=nueva;c.dias_a_prescripcion=diffDias(nueva,HOY);c.fecha_convenio=HOY;
+  // Genera el ACTO de convenio (efecto jurídico) — se refleja en la ficha M5
+  if(!DB.actos.some(a=>a.tipo==='convenio'&&a.id_cuota===id))
+    DB.actos.push({id:ACTO_SEQ++,id_cuota:id,numero_rol:c.numero_rol,rut:c.rut,tipo:'convenio',fecha:HOY,folio:'C-'+(FOLIO_SEQ++),funcionario:'Funcionario de turno · demo',firmado:true,texto:'Convenio de pago suscrito — reconocimiento de deuda (art. 2518 CC)'});
+  logAudit('Convenio suscrito','Rol '+c.numero_rol+' · '+c.periodo+' · reloj reiniciado');
+  render();pintarNav();
+  // Efecto visible de reinicio del reloj
+  requestAnimationFrame(()=>{const r=document.getElementById('m4-reloj');if(r){r.classList.add('pulse');}const b=document.querySelector('#m4-detalle');if(b)b.classList.add('flash');});
+}
+function revertirConvenio(id){
+  delete CONVENIOS[id];guardarConvenios(CONVENIOS);
+  // Recalcular la cuota desde su vencimiento base
+  const c=DB.cuotas.find(x=>x.id===id);
+  const base=addAnios(c.fecha_vencimiento,3);
+  c.fecha_prescripcion=base;c.dias_a_prescripcion=diffDias(base,HOY);
+  c.estado = c.dias_a_prescripcion<0?'prescrita':'impaga';c.hito_interrupcion=null;delete c.fecha_convenio;
+  DB.actos=DB.actos.filter(a=>!(a.tipo==='convenio'&&a.id_cuota===id));   // retira el acto de convenio
+  render();pintarNav();
+}
+
+/* ---------------------------------------------------------------------------
+   VISTA "PRÓXIMO CHECKPOINT" (módulos aún no construidos — sin pantallas rotas)
+--------------------------------------------------------------------------- */
+function vistaSoon(){
+  const mo=MODULOS.find(m=>m.id===RUTA);
+  return `<div class="view-head"><div><div class="eyebrow">${mo.id.toUpperCase()}</div><div class="view-title">${mo.t}</div></div></div>
+  <div class="soon-panel">
+    <div class="sp-ico">${svg(mo.ic)}</div>
+    <h3>${mo.t}</h3>
+    <p>Este módulo se construye en un checkpoint posterior.<br>Checkpoint 1 entrega M1 · M3 · M4 completos y navegables.</p>
+    <p class="note" style="margin-top:14px">Orden pactado: M1 → M3 → M4 · M5 → M6 → M2 · M7 → M8 → M9 · M10 → M11</p>
+  </div>`;
+}
+
+/* ===========================================================================
+   11.b · SELECCIÓN DE CONTEXTO (ficha / informe)
+   =========================================================================== */
+let SEL_RUT=null, SEL_CUOTA=null;
+function cuotaEstrella(){return DB.cuotas.filter(c=>c.estado==='impaga'&&c.dias_a_prescripcion>=0).sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion)[0];}
+function contribConMovimiento(){
+  const map={};
+  DB.cuotas.forEach(c=>{if(['impaga','prescrita','convenida'].includes(c.estado)&&!map[c.rut])map[c.rut]={rut:c.rut,nombre:c.contribuyente};});
+  return Object.values(map).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+}
+const ICO_SELLO='<svg width="14" height="14" aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21h14M9 12s-1-.9-1-2.6S9.2 7 9.2 5.7A2.8 2.8 0 0 1 12 3a2.8 2.8 0 0 1 2.8 2.7c0 1.3-1.2 2-1.2 3.7S15 12 15 12z"/><path d="M7 12h10v3H7z"/></svg>';
+
+/* ---------------------------------------------------------------------------
+   M5 · FICHA DEL CONTRIBUYENTE
+--------------------------------------------------------------------------- */
+function vistaM5(){
+  if(!SEL_RUT){const e=cuotaEstrella();SEL_RUT=e?e.rut:DB.roles[0].rut_contribuyente;}
+  const rolesRut=DB.roles.filter(r=>r.rut_contribuyente===SEL_RUT);
+  if(!rolesRut.length){SEL_RUT=DB.roles[0].rut_contribuyente;return vistaM5();}
+  const rol=rolesRut[0], contrib=rol.contribuyente;
+  const cuotasRut=DB.cuotas.filter(c=>c.rut===SEL_RUT).sort((a,b)=>a.fecha_vencimiento-b.fecha_vencimiento);
+  const actos=DB.actos.filter(a=>a.rut===SEL_RUT).sort((a,b)=>a.fecha-b.fecha);
+  const avisos=DB.avisos.filter(a=>a.rut===SEL_RUT).sort((a,b)=>a.fecha_envio-b.fecha_envio);
+  const domDiff=rol.direccion!==rol.domicilio_sii;
+  const gates=compuertasDetalle(rol,cuotasRut);
+  const picker=contribConMovimiento();
+  // Si se llegó desde una cuota pagada (sin deuda), el contribuyente igual debe
+  // aparecer seleccionado en el selector — si no, el select muestra otro nombre.
+  if(!picker.some(p=>p.rut===SEL_RUT)) picker.unshift({rut:SEL_RUT,nombre:contrib.razon_social+' · sin deuda'});
+
+  const rowsCuotas=cuotasRut.map(c=>{const s=semaforo(c);const puedeInforme=['impaga','prescrita','convenida'].includes(c.estado);
+    return `<tr><td class="mono">${c.numero_rol}</td><td class="mono">${c.periodo}</td><td class="num">${fmtCLP(c.monto)}</td><td class="mono">${fmtFecha(c.fecha_vencimiento)}</td><td><span class="sem ${s.cls}"><span class="d"></span>${s.txt}</span></td><td><span class="chip ${c.estado}">${c.estado}</span></td><td>${puedeInforme?`<button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="irInforme(${c.id})">Informe</button>`:'<span class="muted">—</span>'}</td></tr>`;}).join('');
+
+  const LBL_ACTO={giro:'Giro',notificacion:'Notificación',resolucion:'Resolución',citacion:'Citación',convenio:'Convenio',demanda:'Demanda',clausura:'Clausura'};
+  const eventoActo=a=>`<div class="evt evt-actos"><div class="e-top"><span class="e-tipo">${ICO_SELLO}${LBL_ACTO[a.tipo]||a.tipo}</span><span class="e-fecha">${fmtFecha(a.fecha)}</span></div><div class="e-meta">Folio ${a.folio} · ${a.funcionario} · ${a.firmado?'firmado':'sin firma'}</div><div style="font-size:12px;margin-top:3px">${a.texto}</div></div>`;
+  const eventoAviso=a=>`<div class="evt evt-avisos"><div class="e-top"><span class="e-tipo">${a.canal.toUpperCase()}</span><span class="e-fecha">${fmtFecha(a.fecha_envio)}</span></div><div class="e-meta">${a.plantilla} · entrega: ${a.estado_entrega} · ${a.apertura?'abierto':'no abierto'}</div></div>`;
+
+  const gateChip=g=>{
+    if(g.propuesta)return `<span class="chip prescrita" style="background:#3A2A00;border-color:#3A2A00">${g.estado}</span>`;
+    if(g.on)return `<span class="chip impaga">${g.estado}</span>`;
+    return `<span class="chip incobrable">${g.estado}</span>`;};
+
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M5 · Ficha</div>
+      <div class="view-title">Ficha del contribuyente</div>
+      <div class="view-sub">Identificación, roles y cuotas, dos líneas de tiempo separadas (actos vs avisos) y las compuertas aplicables con su base legal.</div>
+    </div>
+    <div class="field"><label>Contribuyente</label>
+      <select onchange="SEL_RUT=this.value;render()" style="min-width:280px">
+        ${picker.map(p=>`<option value="${p.rut}" ${p.rut===SEL_RUT?'selected':''}>${p.nombre} · ${p.rut}</option>`).join('')}
+      </select></div>
+  </div>
+
+  <div class="id-grid">
+    <div class="box">
+      <h3>Identificación</h3>
+      <div class="kv"><span class="kk">Razón social / nombre</span><span class="vv">${contrib.razon_social}</span></div>
+      <div class="kv"><span class="kk">RUT</span><span class="vv">${SEL_RUT}</span></div>
+      <div class="kv"><span class="kk">Tipo</span><span class="vv">${contrib.tipo}</span></div>
+      <div class="kv"><span class="kk">Giro</span><span class="vv">${rol.giro} (${rol.codigo_actividad_sii})</span></div>
+      <div class="kv"><span class="kk">Roles asociados</span><span class="vv">${rolesRut.length}</span></div>
+      ${contrib.fallecido?'<div class="kv"><span class="kk" style="color:#B4232C">Alerta</span><span class="vv" style="color:#B4232C">Contribuyente fallecido con rol activo</span></div>':''}
+    </div>
+    <div class="box">
+      <h3>Contraste de domicilios</h3>
+      <div class="h-sub">Comercial (padrón) vs. registrado ante el SII.</div>
+      <div class="dom-contrast">
+        <div class="dom"><div class="l">Domicilio comercial</div><div class="v">${rol.direccion}</div></div>
+        <div class="dom ${domDiff?'diff':''}"><div class="l">Domicilio SII</div><div class="v">${rol.domicilio_sii}</div></div>
+      </div>
+      ${domDiff?'<p class="note" style="margin-top:8px;color:#8A5C00">Los domicilios no coinciden — revisar antes de notificar.</p>':'<p class="note" style="margin-top:8px">Domicilios coincidentes.</p>'}
+    </div>
+  </div>
+
+  <div class="box" style="margin-bottom:16px">
+    <h3>Roles y cuotas</h3>
+    <div class="table-wrap" style="border:0"><div class="tbl-scroll" style="max-height:260px"><table>
+      <thead><tr><th>Rol</th><th>Período</th><th class="num">Monto</th><th>Vencimiento</th><th>Días a prescripción</th><th>Estado</th><th></th></tr></thead>
+      <tbody>${rowsCuotas}</tbody></table></div></div>
+  </div>
+
+  <div class="box">
+    <h3>Historial: actos y avisos</h3>
+    <div class="h-sub">Dos líneas de tiempo paralelas y distintas. Nunca se combinan.</div>
+    <div class="tl2">
+      <div class="col-actos">
+        <div class="col-head">${svg(IC.balanza)} Actos <span class="tag">con efecto jurídico</span></div>
+        ${actos.length?actos.map(eventoActo).join(''):'<p class="note">Sin actos registrados.</p>'}
+      </div>
+      <div class="col-avisos">
+        <div class="col-head">${svg(IC.chat)} Avisos <span class="tag">sin efecto jurídico</span></div>
+        ${avisos.length?avisos.map(eventoAviso).join(''):'<p class="note">Sin avisos registrados.</p>'}
+      </div>
+    </div>
+    <div class="leyenda"><b>Los avisos informan. Solo los actos notificados producen efectos jurídicos y prueban diligencia.</b> Un WhatsApp, un correo o un SMS no interrumpen la prescripción (art. 2518 CC).</div>
+  </div>
+
+  <div class="box" style="margin-top:16px">
+    <h3>Compuertas de cobranza aplicables</h3>
+    <div class="h-sub">Cada compuerta con su base legal. La clausura solo se propone — la decisión es del alcalde.</div>
+    <table><thead><tr><th>Compuerta</th><th>Base legal</th><th>Estado</th></tr></thead>
+    <tbody>${gates.map(g=>`<tr><td style="white-space:normal"><b>${g.c}</b></td><td class="muted" style="white-space:normal;font-size:12px;max-width:520px">${g.base}</td><td style="white-space:normal">${gateChip(g)}</td></tr>`).join('')}</tbody></table>
+  </div>`;
+}
+function montarM5(){}
+
+/* ---------------------------------------------------------------------------
+   M6 · INFORME DE ANTECEDENTES (documento generado + validación del funcionario)
+--------------------------------------------------------------------------- */
+function cargarFirmas(){try{return JSON.parse(localStorage.getItem(NS+'firmas')||'{}');}catch(e){return {};}}
+function guardarFirmas(o){localStorage.setItem(NS+'firmas',JSON.stringify(o));}
+let FIRMAS=cargarFirmas();
+function vistaM6(){
+  if(!SEL_CUOTA){const e=cuotaEstrella();SEL_CUOTA=e?e.id:DB.cuotas[0].id;}
+  const c=DB.cuotas.find(x=>x.id===SEL_CUOTA)||DB.cuotas[0];
+  const rol=DB.roles.find(r=>r.numero_rol===c.numero_rol);
+  const firma=FIRMAS[c.id];
+  const giroActo=DB.actos.find(a=>a.id_cuota===c.id&&a.tipo==='giro');
+  const notiActo=DB.actos.find(a=>a.id_cuota===c.id&&a.tipo==='notificacion');
+  const s=semaforo(c);
+  const opciones=DB.cuotas.filter(x=>['impaga','prescrita','convenida'].includes(x.estado)).sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion);
+
+  // Sección "lo que NO pudo verificarse" — nunca vacía
+  const noVerif=[];
+  if(!notiActo) noVerif.push('No consta notificación de cobro con folio para esta cuota.');
+  noVerif.push('No consta notificación al Domicilio Digital Único (art. 46 Ley 19.880 reformado por Ley 21.180).');
+  if(rol.direccion!==rol.domicilio_sii) noVerif.push('Discrepancia entre domicilio comercial y domicilio registrado ante el SII, no resuelta.');
+  if(rol.inconsistente_capital) noVerif.push('Capital propio municipal no conciliado con el declarado al SII para el período.');
+  if(rol.contribuyente.fallecido) noVerif.push('Contribuyente figura como fallecido — no se verificó la sucesión ni la vigencia del rol.');
+
+  const resultado = c.estado==='prescrita'
+    ? `La acción de cobro de esta cuota se encuentra <b>prescrita</b> (venció el plazo del art. 2521 CC hace ${Math.abs(c.dias_a_prescripcion)} días sin hito de interrupción).`
+    : c.estado==='convenida'
+      ? `La prescripción fue <b>interrumpida</b> por reconocimiento de deuda (convenio suscrito, art. 2518 CC). Nuevo vencimiento del plazo: ${fmtFecha(c.fecha_prescripcion)} (${c.dias_a_prescripcion} días).`
+      : `La acción de cobro se encuentra <b>vigente</b>: restan <b>${c.dias_a_prescripcion} días</b> para que prescriba (${fmtFecha(c.fecha_prescripcion)}). ${c.dias_a_prescripcion<180?'Cuota en rango de riesgo.':''}`;
+
+  const sign = firma
+    ? `<div class="firmado-sello">✓ Informe validado<br>Funcionario: <b>${firma.funcionario}</b><br>Fecha y hora: ${firma.fecha}<br>Conformidad registrada: “${firma.texto}”</div>
+       <button class="btn btn-ghost no-print" style="margin-top:10px" onclick="revocarFirma(${c.id})">Revocar validación (demo)</button>`
+    : `<div class="sign-box no-print">
+        <div class="field" style="margin-bottom:10px"><label>Funcionario que valida</label><input type="text" id="m6-func" placeholder="Nombre y unidad" value=""></div>
+        <label class="field" style="font-weight:600;font-size:13px;color:var(--ink)">Manifieste su conformidad o discrepancia con este informe</label>
+        <textarea id="m6-texto" placeholder="Concuerdo con el informe, salvo el período 2022-S2, que excluyo por haber operado convenio anterior."></textarea>
+        <div class="charc" id="m6-charc">0 / mínimo 20 caracteres</div>
+        <button class="btn btn-blue" id="m6-firmar" style="margin-top:10px" disabled onclick="firmarInforme(${c.id})">Firmar con conformidad</button>
+        <p class="note" style="margin-top:8px">No existe botón “Aprobar”. La firma exige identificar al funcionario y un texto de conformidad (mín. 20 caracteres).</p>
+      </div>`;
+
+  return `
+  <div class="view-head no-print">
+    <div>
+      <div class="eyebrow">M6 · Artefacto jurídico central</div>
+      <div class="view-title">Informe de antecedentes</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-end">
+      <div class="field"><label>Cuota / caso</label>
+        <select onchange="SEL_CUOTA=+this.value;render()" style="min-width:300px">
+          ${opciones.map(o=>`<option value="${o.id}" ${o.id===SEL_CUOTA?'selected':''}>Rol ${o.numero_rol} · ${o.periodo} · ${o.contribuyente}</option>`).join('')}
+        </select></div>
+      <button class="btn" onclick="window.print()">Imprimir</button>
+    </div>
+  </div>
+
+  <div class="doc">
+    <div class="doc-demo">DATOS DE DEMOSTRACIÓN — Municipalidad ficticia de ${COMUNA}. Ninguna cifra corresponde a un municipio real.</div>
+    <h2>Informe de antecedentes de cobranza</h2>
+    <div class="doc-sub">Municipalidad de ${COMUNA} · Dirección de Rentas · generado ${fmtFecha(HOY)}</div>
+
+    <section style="border-top:0"><span class="s-num">1 · IDENTIFICACIÓN DEL CASO</span>
+      <div class="s-tit"></div>
+      <div class="fuente"><b>Rol:</b> ${c.numero_rol} &nbsp; <b>Cuota:</b> #${c.id} &nbsp; <b>Período:</b> ${c.periodo} &nbsp; <b>Monto:</b> ${fmtCLP(c.monto)}</div>
+      <div class="fuente"><b>Contribuyente:</b> ${c.contribuyente} &nbsp; <b>RUT:</b> ${c.rut} &nbsp; <b>Tipo patente:</b> ${c.tipo_patente}</div>
+    </section>
+
+    <section><span class="s-num">2 · PROCEDENCIA DE CADA DATO</span>
+      <div class="s-tit">Fuente y folio</div>
+      <div class="fuente"><b>Vencimiento y monto:</b> Padrón municipal, rol ${c.numero_rol}${giroActo?` · giro ${giroActo.folio}`:''}.</div>
+      <div class="fuente"><b>Capital propio / actividad:</b> Archivo SII mayo 2026, código de actividad ${rol.codigo_actividad_sii}.</div>
+      <div class="fuente"><b>Uso de suelo:</b> DOM${rol.uso_suelo_ok?', conforme':' — sin permiso conforme'}.</div>
+      ${notiActo?`<div class="fuente"><b>Notificación:</b> ${notiActo.folio}, ${fmtFecha(notiActo.fecha)}, ${notiActo.funcionario}.</div>`:''}
+    </section>
+
+    <section><span class="s-num">3 · REGLA APLICADA</span>
+      <div class="s-tit">En lenguaje verificable</div>
+      <p style="font-size:13px">Se computó el plazo de prescripción de la acción de cobro conforme al <b>art. 2521 del Código Civil</b> (tres años), a partir del vencimiento de la cuota (${fmtFecha(c.fecha_vencimiento)}), verificando la existencia de hitos de interrupción del <b>art. 2518 del Código Civil</b> (reconocimiento de deuda o demanda judicial notificada). El cómputo se realiza <b>por cada cuota</b> de forma separada (Corte Suprema).</p>
+    </section>
+
+    <section><span class="s-num">4 · RESULTADO</span>
+      <div class="s-tit"></div>
+      <p style="font-size:13px">${resultado}</p>
+    </section>
+
+    <section><span class="s-num">5 · LO QUE NO PUDO VERIFICARSE</span>
+      <div class="s-tit">Sección obligatoria</div>
+      <div class="no-verif"><ul>${noVerif.map(x=>`<li style="font-size:12.5px;margin:3px 0">${x}</li>`).join('')}</ul></div>
+    </section>
+
+    <section><span class="s-num">6 · VERSIÓN DE LA REGLA Y FECHA DE EJECUCIÓN</span>
+      <div class="s-tit"></div>
+      <div class="fuente"><b>Regla:</b> PRESC-v1.2 &nbsp; <b>Ejecutada:</b> ${fmtFecha(HOY)}</div>
+    </section>
+
+    <section><span class="s-num">7 · VALIDACIÓN DEL FUNCIONARIO</span>
+      <div class="s-tit"></div>
+      ${sign}
+      <div class="legal-nota">
+        <b>Art. 11 inc. 2 y art. 41 Ley 19.880</b> — las resoluciones deben ser fundadas; la falta de motivación es un vicio sobre requisito esencial. Este informe aporta el sustrato fáctico; la decisión y su fundamentación son del funcionario.
+      </div>
+    </section>
+  </div>`;
+}
+function montarM6(){
+  const t=document.getElementById('m6-texto'),f=document.getElementById('m6-func');if(!t)return;
+  // La firma exige identificar al funcionario Y el texto de conformidad (≥20):
+  // un informe firmado por "anónimo" no prueba nada ante Control.
+  const upd=()=>{const n=t.value.trim().length;const conFunc=f.value.trim().length>0;
+    const cc=document.getElementById('m6-charc');const b=document.getElementById('m6-firmar');
+    cc.textContent=n+' / mínimo 20 caracteres'+(conFunc?'':' · falta identificar al funcionario');
+    cc.classList.toggle('ok',n>=20&&conFunc);b.disabled=n<20||!conFunc;};
+  t.addEventListener('input',upd);f.addEventListener('input',upd);upd();
+}
+function firmarInforme(id){
+  const t=document.getElementById('m6-texto'),f=document.getElementById('m6-func');
+  const texto=t.value.trim();const func=f.value.trim();
+  if(texto.length<20||!func)return;
+  const ahora=new Date();
+  FIRMAS[id]={funcionario:func,fecha:fmtFecha(ahora)+' '+String(ahora.getHours()).padStart(2,'0')+':'+String(ahora.getMinutes()).padStart(2,'0'),texto};
+  guardarFirmas(FIRMAS);logAudit('Informe validado y firmado','Cuota #'+id+' · '+func);render();
+}
+function revocarFirma(id){delete FIRMAS[id];guardarFirmas(FIRMAS);render();}
+
+/* ---------------------------------------------------------------------------
+   M2 · CARGA Y CONCILIACIÓN (funciona con CSV real)
+--------------------------------------------------------------------------- */
+let UPLOAD=null;   // {nombre, rows:[{...,match,sug}]}
+function normRut(s){return String(s||'').replace(/[^0-9kK]/g,'').toUpperCase();}
+function normNom(s){return String(s||'').trim().toLowerCase().replace(/\s+/g,' ');}
+const PADRON_RUTS=new Set(DB.roles.map(r=>normRut(r.rut_contribuyente)));
+// Índice de nombres del padrón → primer RUT asociado (para coincidencia difusa)
+const PADRON_NAMES=new Map();
+DB.roles.forEach(r=>{const k=normNom(r.contribuyente.razon_social);if(!PADRON_NAMES.has(k))PADRON_NAMES.set(k,{name:r.contribuyente.razon_social,rut:r.rut_contribuyente});});
+/* ---- Padrón real (opcional) — convierte la demo en piloto ----
+   El municipio puede cargar su propio padrón (CSV con columna RUT). Mientras
+   esté cargado, la conciliación corre contra él en vez del padrón sintético.
+   Todo se procesa localmente: nada sale del navegador. */
+let PADRON_REAL=null;   // {nombre, filas, ruts:Set, names:Map}
+function padronActivo(){
+  return PADRON_REAL || {nombre:'Padrón de demostración · '+COMUNA,filas:DB.roles.length,ruts:PADRON_RUTS,names:PADRON_NAMES,demo:true};
+}
+function procesarPadron(nombre,text){
+  const rows=parseCSV(text);
+  if(!rows.length){abrirModal('Padrón sin datos','<p>No se detectaron filas con RUT. El padrón debe ser un CSV con encabezados y una columna de RUT (idealmente también razón social y n° de rol).</p>');return;}
+  const ruts=new Set(),names=new Map();
+  rows.forEach(r=>{const nr=normRut(r.rut);if(nr)ruts.add(nr);const k=normNom(r.razon_social);if(k&&!names.has(k))names.set(k,{name:r.razon_social,rut:r.rut});});
+  PADRON_REAL={nombre,filas:rows.length,ruts,names};
+  logAudit('Padrón municipal cargado',nombre+' · '+ruts.size+' RUT');
+  reconciliarDeNuevo();render();
+}
+function quitarPadron(){
+  PADRON_REAL=null;
+  logAudit('Padrón municipal retirado','vuelve el padrón de demostración');
+  reconciliarDeNuevo();render();
+}
+/* Si el archivo SII ya estaba cargado, se re-concilia contra el padrón activo
+   (las resoluciones manuales se descartan: pertenecían al padrón anterior). */
+function reconciliarDeNuevo(){
+  if(UPLOAD) UPLOAD.rows=reconciliar(UPLOAD.rows.map(({match,sug,resuelta,...r})=>r));
+}
+
+/* Conciliación por RUT contra el padrón ACTIVO (real si está cargado, si no el
+   sintético); la difusa exige MISMO nombre con RUT distinto (ambigüedad real:
+   posible homónimo o cambio de RUT), no mero solape de palabras. */
+function reconciliar(rows){
+  const P=padronActivo();
+  return rows.map(row=>{
+    const nr=normRut(row.rut);
+    if(nr && P.ruts.has(nr)) return {...row,match:'exacta',sug:null};
+    const k=normNom(row.razon_social);
+    if(k && P.names.has(k)){const sug=P.names.get(k);if(normRut(sug.rut)!==nr) return {...row,match:'difusa',sug};}
+    return {...row,match:'sin',sug:null};   // sin coincidencia = brecha
+  });
+}
+function parseCSV(text){
+  // Los CSV exportados desde Excel suelen traer BOM: se elimina
+  text=String(text).replace(/^\uFEFF/,'');
+  const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
+  if(!lines.length)return [];
+  const delim=(lines[0].split(';').length>=lines[0].split(',').length)?';':',';
+  const pl=l=>{const o=[];let cur='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='"'){if(l[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}else{if(ch==='"')q=true;else if(ch===delim){o.push(cur);cur='';}else cur+=ch;}}o.push(cur);return o;};
+  const H=pl(lines[0]).map(h=>h.trim().toLowerCase());
+  const ix=names=>H.findIndex(h=>names.some(n=>h.includes(n)));
+  const iR=ix(['rut']),iN=ix(['razon','razón','nombre']),iG=ix(['giro']),iC=ix(['codigo','código']),iD=ix(['domicilio','direccion','dirección']),iK=ix(['capital']),iI=ix(['inicio']),iP=ix(['periodo','período']);
+  return lines.slice(1).map(l=>{const f=pl(l);return{rut:(f[iR]||'').trim(),razon_social:iN>=0?(f[iN]||'').trim():'',giro:iG>=0?f[iG]:'',codigo:iC>=0?f[iC]:'',domicilio:iD>=0?f[iD]:'',capital:iK>=0?f[iK]:'',inicio:iI>=0?f[iI]:'',periodo:iP>=0?f[iP]:''};}).filter(r=>r.rut);
+}
+function procesarTexto(nombre,text){
+  const rows=parseCSV(text);
+  if(!rows.length){abrirModal('Archivo sin datos','<p>No se detectaron filas con RUT. Verifique que el CSV incluya una columna de RUT y encabezados.</p>');return;}
+  UPLOAD={nombre,rows:reconciliar(rows)};logAudit('Carga y conciliación de archivo',nombre+' · '+rows.length+' filas');render();
+}
+function cargarDemoM2(){
+  const ex=DB.roles.slice(0,12).map(r=>({rut:r.rut_contribuyente,razon_social:r.contribuyente.razon_social,giro:r.giro,codigo:r.codigo_actividad_sii,domicilio:r.domicilio_sii,capital:r.capital_propio_sii,inicio:fmtFecha(r.fecha_otorgamiento),periodo:'2026-05'}));
+  const dif=DB.roles.slice(30,33).map(r=>({rut:genRut(),razon_social:r.contribuyente.razon_social,giro:r.giro,codigo:r.codigo_actividad_sii,domicilio:direccion(),capital:'',inicio:'',periodo:'2026-05'}));
+  const bre=DB.registrosSII.filter(x=>x.tipo==='brecha').slice(0,15).map(r=>({rut:r.rut,razon_social:r.razon_social,giro:r.giro,codigo:r.codigo_actividad,domicilio:r.domicilio_registrado,capital:r.capital_propio_declarado,inicio:r.fecha_inicio_actividades,periodo:'2026-05'}));
+  UPLOAD={nombre:'archivo-demostracion-sii.csv',rows:reconciliar([...ex,...dif,...bre])};render();
+}
+function descargarPlantillaM2(){
+  const H=['rut','razon_social','capital_propio_declarado','codigo_actividad','giro','domicilio_registrado','fecha_inicio_actividades','periodo'];
+  const filas=[];for(let i=0;i<30;i++){const g=pick(GIROS);filas.push([genRut(),chance(.5)?razonSocial():nombrePersona(),ri(4,180)*1000000,g[1],g[0],direccion(),fmtFecha(addAnios(HOY,-ri(1,7))),'2026-05']);}
+  descargar('datos-ejemplo-sii.csv',aCSV(H,filas));
+}
+function descargarPlantillaPadron(){
+  const H=['rut','razon_social','numero_rol','tipo_patente','direccion'];
+  const filas=[];for(let i=0;i<15;i++){const g=pick(GIROS);filas.push([genRut(),chance(.5)?razonSocial():nombrePersona(),String(3000+i),'comercial',direccion()]);}
+  descargar('plantilla-padron-municipal.csv',aCSV(H,filas));
+}
+function vistaM2(){
+  const recon = UPLOAD ? (()=>{const e=UPLOAD.rows.filter(r=>r.match==='exacta').length,d=UPLOAD.rows.filter(r=>r.match==='difusa').length,s=UPLOAD.rows.filter(r=>r.match==='sin').length;return {e,d,s};})() : null;
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M2 · Fase 0 · Convierte la demo en piloto</div>
+      <div class="view-title">Carga y conciliación</div>
+      <div class="view-sub">Cargue el archivo del SII (real anonimizado o de demostración). El sistema lo concilia contra el padrón y produce el Informe de Brecha.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="descargarPlantillaPadron()">Plantilla padrón</button>
+      <button class="btn" onclick="descargarPlantillaM2()">Plantilla SII</button>
+      <button class="btn btn-blue" onclick="cargarDemoM2()">Cargar archivo de demostración</button>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:4px">
+    <div>
+      <div class="paso-lbl">Paso 1 · Padrón municipal (opcional)</div>
+      ${PADRON_REAL?`
+      <div class="drop cargado" id="m2-drop-padron" role="button" tabindex="0" onclick="document.getElementById('m2-file-padron').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('m2-file-padron').click()}">
+        <div style="font-size:13.5px;color:#0A7C5A;font-weight:600">✓ Padrón cargado: ${PADRON_REAL.nombre}</div>
+        <p class="note" style="margin-top:4px">${PADRON_REAL.ruts.size} RUT · la conciliación corre contra este padrón. Clic para reemplazar.</p>
+        <button class="btn btn-ghost" style="margin-top:8px;font-size:12px;padding:5px 11px" onclick="event.stopPropagation();quitarPadron()">Quitar · volver al padrón de demostración</button>
+      </div>`:`
+      <div class="drop" id="m2-drop-padron" role="button" tabindex="0" onclick="document.getElementById('m2-file-padron').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('m2-file-padron').click()}">
+        <div class="d-ico">${svg(IC.cartera)}</div>
+        <div style="font-size:13.5px;color:var(--ink)"><b>Arrastre su padrón de patentes</b> (CSV con RUT), o haga clic</div>
+        <p class="note" style="margin-top:5px">Sin él, se concilia contra el padrón de demostración. Se procesa localmente: no sale del navegador.</p>
+      </div>`}
+      <input type="file" id="m2-file-padron" accept=".csv,text/csv" style="display:none">
+    </div>
+    <div>
+      <div class="paso-lbl">Paso 2 · Archivo del SII</div>
+      <div class="drop" id="m2-drop" role="button" tabindex="0" onclick="document.getElementById('m2-file').click()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('m2-file').click()}">
+        <div class="d-ico">${svg(IC.carga)}</div>
+        <div style="font-size:13.5px;color:var(--ink)"><b>Arrastre aquí</b> el CSV del SII, o haga clic para seleccionar</div>
+        <p class="note" style="margin-top:5px">Se detecta automáticamente la columna de RUT. Delimitador ; o , · encabezados en la primera fila.</p>
+      </div>
+      <input type="file" id="m2-file" accept=".csv,text/csv" style="display:none">
+    </div>
+  </div>
+  <div style="margin:10px 0 4px">
+    <span class="padron-chip ${PADRON_REAL?'real':'demo'}">Conciliando contra: ${padronActivo().nombre} · ${PADRON_REAL?PADRON_REAL.ruts.size+' RUT':padronActivo().filas+' roles sintéticos'}</span>
+  </div>
+
+  ${UPLOAD?`
+  <div class="recon-cards">
+    <div class="recon-card exacta"><div class="rc-n">${recon.e}</div><div class="rc-l">Coincidencia exacta (RUT en padrón)</div></div>
+    <div class="recon-card difusa"><div class="rc-n">${recon.d}</div><div class="rc-l">Coincidencia difusa (revisar)</div></div>
+    <div class="recon-card sin"><div class="rc-n">${recon.s}</div><div class="rc-l">Sin coincidencia — <b>brecha</b></div></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <span class="note">Archivo SII: ${UPLOAD.nombre} · ${UPLOAD.rows.length} filas · conciliado contra ${padronActivo().nombre}</span>
+    <button class="btn btn-blue no-print" style="margin-left:auto" onclick="exportarBrecha()">Exportar Informe de Brecha (CSV)</button>
+    <button class="btn no-print" onclick="window.print()">Imprimir</button>
+  </div>
+  <div class="doc-demo" style="margin-bottom:10px">${PADRON_REAL
+    ?'Informe de Brecha — generado localmente contra el padrón cargado por el usuario ('+PADRON_REAL.nombre+'). Ningún dato sale de este navegador.'
+    :'Informe de Brecha — datos de demostración. Municipalidad ficticia de '+COMUNA+'.'}</div>
+  <div class="table-wrap"><div class="tbl-scroll" style="max-height:46vh"><table>
+    <thead><tr><th>RUT (archivo SII)</th><th>Razón social / nombre</th><th>Giro</th><th>Match</th><th>Resolución</th></tr></thead>
+    <tbody>${UPLOAD.rows.map((r,i)=>`<tr>
+      <td class="mono">${r.rut}</td><td>${r.razon_social||'<span class="muted">—</span>'}</td>
+      <td>${r.giro||'<span class="muted">—</span>'} ${r.codigo?`<span class="muted mono">${r.codigo}</span>`:''}</td>
+      <td><span class="mtag ${r.match}">${r.match==='sin'?'sin coincidencia':r.match}</span></td>
+      <td class="muted" style="white-space:normal;font-size:11.5px">${
+        r.match==='exacta'?(r.resuelta?'Confirmado como existente (resolución manual)':'Ya está en el padrón')
+        :r.match==='difusa'?('Posible: '+r.sug.name+' ('+r.sug.rut+') — <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px" onclick="resolverM2('+i+',\'exacta\')">Es el mismo</button> <button class="btn btn-ghost" style="padding:2px 8px;font-size:11px" onclick="resolverM2('+i+',\'sin\')">Es brecha</button>')
+        :(r.resuelta?'Confirmado como brecha (resolución manual)':'Candidato a incorporar al padrón')}</td>
+    </tr>`).join('')}</tbody>
+  </table></div></div>
+  `:`
+  <div class="origin" style="margin-top:16px">
+    <h3>Qué hace este módulo</h3>
+    <div class="rows">
+      <div class="r">${svg(IC.brecha)}<div><b>Conciliación por RUT</b> contra el padrón activo: exacta, difusa (nombre similar, RUT distinto) y sin coincidencia (brecha).</div></div>
+      <div class="r">${svg(IC.informe)}<div><b>Informe de Brecha</b> exportable a CSV e imprimible — el gancho de la segunda reunión.</div></div>
+      <div class="r">${svg(IC.carga)}<div><b>Modo piloto:</b> cargue su padrón real (Paso 1) y su archivo SII real anonimizado (Paso 2) para un informe de brecha verdadero. Las plantillas traen los encabezados esperados.</div></div>
+      <div class="r">${svg(IC.balanza)}<div>Sin servidor: el archivo se procesa <b>localmente</b> en el navegador; nada se envía a terceros.</div></div>
+    </div>
+  </div>`}`;
+}
+function montarM2(){
+  // Cablea un dropzone + input de archivo a su procesador (SII o padrón)
+  const wire=(dropId,inputId,handler)=>{
+    const inp=document.getElementById(inputId),drop=document.getElementById(dropId);
+    const leer=f=>{if(!f)return;const rd=new FileReader();rd.onload=()=>handler(f.name,rd.result);rd.readAsText(f);};
+    if(inp)inp.addEventListener('change',e=>{leer(e.target.files[0]);e.target.value='';});
+    if(drop){['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hover');}));
+      ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hover');}));
+      drop.addEventListener('drop',e=>leer(e.dataTransfer.files[0]));}
+  };
+  wire('m2-drop','m2-file',procesarTexto);
+  wire('m2-drop-padron','m2-file-padron',procesarPadron);
+}
+/* Resolución manual de coincidencias difusas: el funcionario decide si el RUT
+   del archivo corresponde al contribuyente sugerido (exacta) o es brecha (sin). */
+function resolverM2(i,decision){
+  if(!UPLOAD||!UPLOAD.rows[i])return;
+  UPLOAD.rows[i].match=decision;
+  UPLOAD.rows[i].resuelta=true;
+  logAudit('Resolución manual de coincidencia',UPLOAD.rows[i].rut+' → '+(decision==='exacta'?'mismo contribuyente':'brecha'));
+  render();
+}
+function exportarBrecha(){
+  if(!UPLOAD)return;
+  const sin=UPLOAD.rows.filter(r=>r.match==='sin');
+  const csv=aCSV(['rut','razon_social','giro','codigo_actividad','domicilio_sii','fecha_inicio','periodo_archivo','clasificacion'],
+    sin.map(r=>[r.rut,r.razon_social,r.giro,r.codigo,r.domicilio,r.inicio,r.periodo,'brecha_sin_rol']));
+  descargar('informe-de-brecha_villa-esperanza.csv',csv);
+}
+
+/* ---------------------------------------------------------------------------
+   M7 · COMUNICACIONES
+--------------------------------------------------------------------------- */
+const HITOS=[
+  {t:'T−30', ev:'Recordatorio de vencimiento', canal:'WhatsApp / email', efecto:false},
+  {t:'T−7',  ev:'Segundo recordatorio',        canal:'WhatsApp / SMS',   efecto:false},
+  {t:'T+1',  ev:'Notificación de deuda',        canal:'Domicilio Digital Único', efecto:true},
+  {t:'T+15', ev:'Aviso de regularización',      canal:'email',            efecto:false},
+  {t:'T+45', ev:'Citación / gestión de cobro',  canal:'Notificación formal', efecto:true},
+  {t:'T−180',ev:'Alerta de prescripción',       canal:'interno (equipo)', efecto:false}
+];
+// Términos prohibidos en plantillas de aviso, con la regla que infringe cada uno
+const TERMINOS_PROHIBIDOS=[
+  {t:'deud',    lbl:'deuda / deudor', regla:'WhatsApp Business Messaging Policy de Meta — la cobranza de deudas figura entre los servicios prohibidos, con independencia de las licencias de la entidad.'},
+  {t:'moros',   lbl:'moroso / morosidad', regla:'Meta + Ley 21.719 — expone la condición financiera del titular por un canal informal.'},
+  {t:'embarg',  lbl:'embargo', regla:'Meta — mensajería de cobranza y amenaza de sanción prohibida.'},
+  {t:'clausur', lbl:'clausura', regla:'Meta — amenaza de sanción por canal informal; además la clausura no es discrecional.'},
+  {t:'juicio',  lbl:'juicio', regla:'Meta — cobranza judicial por canal informal prohibida.'},
+  {t:'demanda', lbl:'demanda', regla:'Meta — anuncio de acción judicial por canal informal.'},
+  {t:'apremio', lbl:'apremio', regla:'Meta — amenaza de apremio prohibida.'},
+  {t:'monto',   lbl:'monto', regla:'Ley 21.719 — enviar un dato financiero por un canal de un tercero extranjero constituye transferencia internacional de datos.'},
+  {t:'cobr',    lbl:'cobro / cobranza', regla:'Meta — cobranza de deudas entre los servicios prohibidos.'},
+  {t:'remate',  lbl:'remate', regla:'Meta — amenaza de ejecución por canal informal.'}
+];
+function vistaM7(){
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M7 · Comunicaciones</div>
+      <div class="view-title">Comunicaciones y notificación</div>
+      <div class="view-sub">La malla de hitos, el patrón de aviso ciego y un validador que demuestra criterio: qué se puede decir por WhatsApp y qué no.</div>
+    </div>
+  </div>
+
+  <div class="box" style="margin-bottom:16px">
+    <h3>Malla de hitos</h3>
+    <div class="h-sub">Cada hito indica canal y si el contacto produce o no efecto jurídico.</div>
+    <div class="hitos">
+      ${HITOS.map(h=>`<div class="hito"><div class="h-t">${h.t}</div><div class="h-ev">${h.ev}</div><div class="h-canal">${h.canal}</div><div class="h-efecto ${h.efecto?'si':'no'}">${h.efecto?'produce efecto jurídico':'sin efecto jurídico'}</div></div>`).join('')}
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="box">
+      <h3>Aviso ciego por WhatsApp <span class="sim-tag">Simulado para demostración</span></h3>
+      <div class="h-sub">El mensaje avisa, no informa el monto ni la condición de deuda.</div>
+      <div style="display:flex;justify-content:center;margin:8px 0 14px">
+        <div class="phone">
+          <div class="p-top"><div class="notch"></div></div>
+          <div class="p-app">
+            <div class="p-head"><span class="av"></span>Municipalidad de ${COMUNA}</div>
+            <div class="p-body">
+              <div class="bubble">Municipalidad de ${COMUNA}: tiene información pendiente sobre su patente comercial. Revísela en muni-villaesperanza.cl/mis-patentes<div class="t">10:24</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="box">
+      <h3>Por qué el mensaje no dice el monto</h3>
+      <div class="h-sub">Tres razones, una por línea.</div>
+      <ul class="reasons">
+        <li><b>Política de Meta:</b> la <i>WhatsApp Business Messaging Policy</i> incluye la cobranza de deudas entre los servicios prohibidos, con independencia de las licencias que tenga la entidad.</li>
+        <li><b>Ley 21.719:</b> enviar un dato financiero por un canal de un tercero extranjero constituye transferencia internacional de datos.</li>
+        <li><b>Ley 19.880:</b> WhatsApp no es domicilio digital único y no practica notificación válida.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box" style="margin-bottom:16px">
+    <h3>Validador de plantillas en vivo</h3>
+    <div class="h-sub">Escriba un mensaje: el sistema marca en rojo los términos prohibidos y explica la regla que infringe cada uno.</div>
+    <div class="grid-2">
+      <div>
+        <textarea id="m7-input" style="width:100%;min-height:120px" oninput="validarPlantilla()"></textarea>
+        <div style="margin-top:10px"><div class="note" style="margin-bottom:4px">Vista previa con marcado:</div><div class="validador-out" id="m7-out"></div></div>
+      </div>
+      <div><div class="note" style="margin-bottom:4px">Hallazgos:</div><div id="m7-find"></div></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>Capa notificatoria — Domicilio Digital Único <span class="sim-tag">Simulado para demostración</span></h3>
+    <div class="h-sub">La notificación con efecto jurídico se practica al Domicilio Digital Único, no por WhatsApp.</div>
+    <div class="legal-box">
+      Notificación practicada al <b>Domicilio Digital Único</b> del contribuyente conforme al <b>art. 46 de la Ley 19.880</b>, reformado por la <b>Ley 21.180</b> (transformación digital del Estado). Deja constancia fehaciente de fecha y contenido — a diferencia de un aviso por canal informal.
+      <span class="cite">Este es el acto que interrumpe plazos y prueba diligencia; el WhatsApp del panel anterior, no.</span>
+    </div>
+  </div>`;
+}
+function validarPlantilla(){
+  const el=document.getElementById('m7-input'),out=document.getElementById('m7-out'),find=document.getElementById('m7-find');
+  if(!el)return;
+  const txt=el.value;
+  if(!txt.trim()){out.innerHTML='<span class="muted">Escriba un mensaje…</span>';find.innerHTML='';return;}
+  let esc=txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const hits=[];
+  TERMINOS_PROHIBIDOS.forEach(o=>{
+    const re=new RegExp('\\b('+o.t+'\\wáéíóúñ*)','gi');
+    const re2=new RegExp('('+o.t+'[a-záéíóúñ]*)','gi');
+    if(re2.test(txt)){hits.push(o);esc=esc.replace(new RegExp('('+o.t+'[a-záéíóúñ]*)','gi'),'<span class="bad">$1</span>');}
+  });
+  out.innerHTML=esc;
+  find.innerHTML = hits.length
+    ? hits.map(o=>`<div class="finding"><span class="term">${o.lbl}</span><span>${o.regla}</span></div>`).join('')
+    : '<div class="ok-msg">✓ Sin términos prohibidos. El mensaje puede enviarse como aviso ciego.</div>';
+}
+function montarM7(){
+  const el=document.getElementById('m7-input');if(!el)return;
+  el.value='Estimado contribuyente: usted mantiene una deuda morosa. El monto puede derivar en embargo, juicio, cobranza judicial y clausura del local.';
+  validarPlantilla();
+}
+
+/* ---------------------------------------------------------------------------
+   M8 · CONVENIO DE PAGO
+--------------------------------------------------------------------------- */
+let M8_SEL=null;
+function vistaM8(){
+  // Convenio sobre cuotas aún vigentes (impagas) — el convenio las rescata de la
+  // prescripción. Se incluyen las convenidas para no perder de vista la recién suscrita.
+  // Las ya prescritas no se ofrecen: un convenio no las "resucita" limpiamente.
+  const opciones=DB.cuotas.filter(c=>c.estado==='impaga'||c.estado==='convenida').sort((a,b)=>a.dias_a_prescripcion-b.dias_a_prescripcion);
+  if(!(M8_SEL&&opciones.find(c=>c.id===M8_SEL))) M8_SEL=opciones[0]?opciones[0].id:null;
+  const c=M8_SEL?DB.cuotas.find(x=>x.id===M8_SEL):null;
+  const nConv=Object.keys(CONVENIOS).length, rescatadas=DB.cuotas.filter(x=>x.estado==='convenida').length;
+  const convenidasList=DB.cuotas.filter(x=>x.estado==='convenida');
+
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M8 · Convenio de pago</div>
+      <div class="view-title">Convenio de pago</div>
+      <div class="view-sub">Al suscribir se genera un acto, se reconoce la deuda (art. 2518 CC) y el reloj de prescripción se reinicia a tres años.</div>
+    </div>
+  </div>
+
+  ${c?`
+  <div class="grid-2">
+    <div class="box" id="m8-sim">
+      <h3>Simulador de convenio <span class="sim-tag">Simulado para demostración</span></h3>
+      <div class="field" style="margin-bottom:12px"><label>Cuota</label>
+        <select onchange="M8_SEL=+this.value;render()">
+          ${opciones.map(o=>`<option value="${o.id}" ${o.id===M8_SEL?'selected':''}>Rol ${o.numero_rol} · ${o.periodo} · ${fmtCLP(o.monto)} · ${o.dias_a_prescripcion<0?'prescrita':o.dias_a_prescripcion+'d'}</option>`).join('')}
+        </select></div>
+      <div class="plan-grid">
+        <div class="field"><label>Monto (deuda)</label><input type="number" id="m8-monto" value="${c.monto}" min="0"></div>
+        <div class="field"><label>N° de cuotas</label><input type="number" id="m8-n" value="6" min="1" max="36"></div>
+        <div class="field"><label>Primer abono</label><input type="number" id="m8-abono" value="${Math.round(c.monto*0.1)}" min="0"></div>
+      </div>
+      <div class="plan-out" id="m8-plan"></div>
+      <div class="legal-box" style="margin-top:12px">
+        La condonación de multas e intereses tiene <b>límites legales</b> y suele requerir decreto alcaldicio conforme a la ordenanza. <span class="cite">Este simulador no condona automáticamente: solo proyecta el plan y registra el reconocimiento de deuda.</span>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Efecto sobre la prescripción</h3>
+      <div class="h-sub">El acto que rescata la cuota.</div>
+      <div id="m8-efecto"></div>
+      <div class="plan-out" style="margin-top:14px">
+        <div class="po"><span class="n" id="m8-cconv">${nConv}</span><span class="l">Convenios suscritos</span></div>
+        <div class="po"><span class="n" id="m8-cresc">${rescatadas}</span><span class="l">Cuotas rescatadas de prescripción</span></div>
+      </div>
+      ${convenidasList.length?`<div style="margin-top:12px"><div class="note" style="margin-bottom:4px">Últimos convenios:</div>${convenidasList.slice(0,4).map(x=>`<div class="kv"><span class="kk">Rol ${x.numero_rol} · ${x.periodo}</span><span class="vv">prescribe ${fmtFecha(x.fecha_prescripcion)}</span></div>`).join('')}</div>`:''}
+    </div>
+  </div>`:'<div class="soon-panel">No hay cuotas impagas para convenir.</div>'}`;
+}
+function calcularPlanM8(){
+  const c=DB.cuotas.find(x=>x.id===M8_SEL);if(!c)return;
+  // Saneo de entradas: sin negativos, abono acotado a [0, monto], cuotas 1–36
+  const monto=Math.max(0,+val('m8-monto')||c.monto);
+  const n=Math.min(36,Math.max(1,Math.round(+val('m8-n')||1)));
+  const abono=Math.min(monto,Math.max(0,+val('m8-abono')||0));
+  const saldo=monto-abono, cuota=saldo/n;
+  const plan=document.getElementById('m8-plan');
+  if(plan)plan.innerHTML=`<div class="po"><span class="n">${fmtCLP(abono)}</span><span class="l">Primer abono</span></div>
+    <div class="po"><span class="n">${n}</span><span class="l">Cuotas</span></div>
+    <div class="po"><span class="n">${fmtCLP(cuota)}</span><span class="l">Valor por cuota</span></div>`;
+}
+function pintarEfectoM8(){
+  const c=DB.cuotas.find(x=>x.id===M8_SEL);const cont=document.getElementById('m8-efecto');if(!cont||!c)return;
+  if(c.estado==='convenida'){
+    cont.innerHTML=`<div class="firmado-sello">✓ Convenio suscrito el ${fmtFecha(c.fecha_convenio||HOY)}.<br>Hito de interrupción: <b>reconocimiento de deuda</b> (art. 2518 CC).<br>Reloj reiniciado — nueva prescripción: <b>${fmtFecha(c.fecha_prescripcion)}</b> (${c.dias_a_prescripcion} días).</div>
+      <button class="btn btn-ghost" style="margin-top:10px" onclick="revertirConvenio(${c.id})">Revertir convenio (demo)</button>`;
+  }else{
+    const s=semaforo(c);
+    cont.innerHTML=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div><div class="note">Días a prescripción hoy</div><div class="reloj" style="color:${s.cls==='negro'?'var(--black-chip)':s.cls==='rojo'?'var(--red)':s.cls==='ambar'?'var(--amber)':'var(--green)'}">${c.dias_a_prescripcion<0?'PRESCRITA':c.dias_a_prescripcion+' días'}</div></div></div>
+      <button class="btn btn-blue" onclick="suscribirConvenio(${c.id})">Suscribir convenio y reiniciar reloj</button>
+      <p class="note" style="margin-top:8px">Al suscribir, el reloj salta a ${fmtFecha(addAnios(HOY,3))}.</p>`;
+  }
+}
+function montarM8(){
+  ['m8-monto','m8-n','m8-abono'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',calcularPlanM8);});
+  calcularPlanM8();pintarEfectoM8();
+}
+
+/* ---------------------------------------------------------------------------
+   M9 · TRANSPARENCIA Y CUMPLIMIENTO
+--------------------------------------------------------------------------- */
+function vistaM9(){
+  const matriz=[
+    {n:'Ley 21.180', req:'Transformación digital del Estado; notificación electrónica.', cubre:'Notificación al Domicilio Digital Único (art. 46 Ley 19.880 reformado); avisos informales separados de los actos.'},
+    {n:'Ley 21.719', req:'Protección de datos; base de licitud; transferencia internacional.', cubre:'Base en funciones públicas y obligación legal (art. 13); no se envían datos financieros por canales de terceros. Vigencia inicial 01-12-2026, con postergación a 2027 en trámite — el sistema cumple desde ya.'},
+    {n:'Ley 21.663', req:'Ciberseguridad de órganos del Estado; Operadores de Importancia Vital.', cubre:'Municipio cubierto como órgano del Estado. La condición de OIV requiere calificación por resolución de la ANCI (no automática).'},
+    {n:'Circular 711/2023', req:'Estándares de documento electrónico e interoperabilidad.', cubre:'Informes con procedencia, folio y versión de regla; exportación abierta. Mapeo preliminar.'},
+    {n:'Decretos 7 y 11 de 2023', req:'Estándares de gobierno digital y seguridad de la información.', cubre:'Trazabilidad, bitácora de auditoría y minimización de datos. Mapeo preliminar.'}
+  ];
+  return `
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">M9 · Lo que mira el Director de Control</div>
+      <div class="view-title">Transparencia y cumplimiento</div>
+      <div class="view-sub">Qué usa apoyo algorítmico, qué decide una persona, sobre qué base legal se trata el dato, y el registro de auditoría.</div>
+    </div>
+  </div>
+
+  <div class="transp-grid">
+    <div class="transp-col">
+      <h4><span class="dot-ai"></span> Con apoyo algorítmico</h4>
+      <ul>
+        <li>Conciliación por RUT del archivo SII contra el padrón.</li>
+        <li>Cálculo de días a prescripción por cuota (art. 2521 CC).</li>
+        <li>Detección de brecha e inconsistencias de capital.</li>
+        <li>Validación de plantillas de comunicación.</li>
+      </ul>
+    </div>
+    <div class="transp-col">
+      <h4><span class="dot-hum"></span> Decisión humana (el sistema no lo hace)</h4>
+      <ul>
+        <li>Ningún acto administrativo se ejecuta automáticamente.</li>
+        <li>La firma exige texto de conformidad del funcionario.</li>
+        <li>La clausura solo se <b>propone</b> — decide el alcalde.</li>
+        <li>Ninguna priorización usa datos socioeconómicos ni territoriales; el modelo no los contiene.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="licitud">
+    <b>Declaración de base de licitud.</b> El tratamiento se funda en el ejercicio de funciones públicas y en el cumplimiento de obligaciones legales (<b>Ley 21.719, art. 13</b>), <b>no</b> en el consentimiento del titular.
+    <span class="cite" style="display:block;margin-top:8px;color:#4F46E5;font-family:var(--mono);font-size:11px">La Ley 21.719 (publicada el 13-12-2024) fija su vigencia inicial el 01-12-2026; en el Congreso se tramita su postergación a 2027 (Boletín 18.623-07). El sistema está diseñado para cumplir desde ya, rija la fecha que rija.</span>
+  </div>
+
+  <div class="box" style="margin-bottom:16px">
+    <h3>Matriz de cumplimiento</h3>
+    <table><thead><tr><th>Norma</th><th>Requisito</th><th>Cómo lo cubre el sistema</th></tr></thead>
+    <tbody>${matriz.map(m=>`<tr><td style="white-space:normal"><b>${m.n}</b></td><td class="muted" style="white-space:normal;font-size:12px">${m.req}</td><td style="white-space:normal;font-size:12px">${m.cubre}</td></tr>`).join('')}</tbody></table>
+    <p class="note" style="margin-top:10px">Mapa normativo preliminar; el detalle de Circular 711/2023 y Decretos 7 y 11 de 2023 requiere validación jurídica final.</p>
+  </div>
+
+  <div class="box">
+    <h3>Bitácora de auditoría</h3>
+    <div class="h-sub">Últimas ${Math.min(AUDIT.length,50)} acciones (los tableros muestran carga y estado por unidad, nunca desempeño individual).</div>
+    <div class="bitacora"><table>
+      <thead><tr><th>Fecha y hora</th><th>Acción</th><th>Detalle</th><th>Usuario</th></tr></thead>
+      <tbody>${AUDIT.slice(0,50).map(a=>`<tr><td class="mono">${a.ts}</td><td>${a.accion}</td><td class="muted">${a.detalle||'—'}</td><td class="mono muted">${a.usuario}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ---------------------------------------------------------------------------
+   M10 · MODO LEVANTAMIENTO (captura de comentarios durante la demo)
+--------------------------------------------------------------------------- */
+let LEVANTAMIENTO_ON=false;
+function cargarComentarios(){try{return JSON.parse(localStorage.getItem(NS+'levantamiento')||'[]');}catch(e){return [];}}
+function guardarComentarios(a){localStorage.setItem(NS+'levantamiento',JSON.stringify(a));}
+let COMENTARIOS=cargarComentarios();
+let DRAFT={ocurre:'',prioridad:''};
+function toggleLevantamiento(){
+  LEVANTAMIENTO_ON=!LEVANTAMIENTO_ON;
+  document.getElementById('lev-toggle').classList.toggle('on',LEVANTAMIENTO_ON);
+  document.getElementById('lev-toggle-txt').textContent='Modo levantamiento · '+(LEVANTAMIENTO_ON?'activo':'off');
+  document.getElementById('lev-toggle').setAttribute('aria-checked',String(LEVANTAMIENTO_ON));
+  document.getElementById('lev-fab').style.display=LEVANTAMIENTO_ON?'flex':'none';
+  logAudit('Modo levantamiento '+(LEVANTAMIENTO_ON?'activado':'desactivado'));
+}
+function abrirComentario(){
+  const mo=MODULOS.find(m=>m.id===RUTA)||{id:RUTA,t:RUTA};
+  DRAFT={ocurre:'',prioridad:''};
+  abrirModal('Comentario · '+mo.t,`
+    <div class="form-row"><label>¿Esto ocurre así en su municipio?</label>
+      <div class="seg">${['Sí','No','Parcialmente'].map(o=>`<button onclick="setDraft('ocurre','${o}',this)">${o}</button>`).join('')}</div></div>
+    <div class="form-row"><label>¿Qué falta o qué está mal?</label>
+      <textarea id="com-texto" placeholder="Texto libre"></textarea></div>
+    <div class="form-row"><label>Prioridad</label>
+      <div class="seg">${['Crítico','Importante','Deseable'].map(o=>`<button onclick="setDraft('prioridad','${o}',this)">${o}</button>`).join('')}</div></div>
+    <button class="btn btn-blue" onclick="guardarComentario('${mo.id}','${mo.t}')">Guardar comentario</button>
+    <p class="note" style="margin-top:8px">Se registra automáticamente el módulo, la fecha y la hora.</p>`);
+}
+function setDraft(k,v,btn){DRAFT[k]=v;Array.from(btn.parentElement.children).forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');}
+function guardarComentario(modId,modTit){
+  const texto=(document.getElementById('com-texto').value||'').trim();
+  const d=new Date();
+  COMENTARIOS.push({modulo:modId,modulo_titulo:modTit,ocurre:DRAFT.ocurre||'—',texto:texto||'—',prioridad:DRAFT.prioridad||'Deseable',ts:fmtFecha(d)+' '+hhmm(d)});
+  guardarComentarios(COMENTARIOS);
+  logAudit('Comentario de levantamiento',modTit+' · '+(DRAFT.prioridad||'Deseable'));
+  cerrarModal();if(RUTA==='m10')render();
+}
+function borrarComentario(i){COMENTARIOS.splice(i,1);guardarComentarios(COMENTARIOS);render();}
+function exportComentarios(tipo){
+  if(!COMENTARIOS.length){abrirModal('Sin comentarios','<p>Aún no hay comentarios que exportar.</p>');return;}
+  if(tipo==='csv'){const csv=aCSV(['modulo','modulo_titulo','ocurre','prioridad','comentario','registrado'],COMENTARIOS.map(c=>[c.modulo,c.modulo_titulo,c.ocurre,c.prioridad,c.texto,c.ts]));descargar('levantamiento_villa-esperanza.csv',csv);}
+  else{descargar('levantamiento_villa-esperanza.json',JSON.stringify(COMENTARIOS,null,2),'application/json');}
+}
+function vistaM10(){
+  const total=COMENTARIOS.length, pp=p=>COMENTARIOS.filter(c=>c.prioridad===p).length;
+  return `
+  <div class="view-head">
+    <div><div class="eyebrow">M10 · Instrumento de descubrimiento</div>
+      <div class="view-title">Modo levantamiento</div>
+      <div class="view-sub">Active el interruptor de la barra lateral y use "Comentar este módulo" (abajo a la derecha) en cualquier pantalla. Todo se exporta para consolidar entre municipios.</div></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" onclick="exportComentarios('json')">Exportar JSON</button>
+      <button class="btn btn-blue" onclick="exportComentarios('csv')">Exportar levantamiento (CSV)</button>
+    </div>
+  </div>
+  <div class="lev-cards">
+    <div class="lev-card"><div class="n">${total}</div><div class="l">Comentarios</div></div>
+    <div class="lev-card"><div class="n">${pp('Crítico')}</div><div class="l">Críticos</div></div>
+    <div class="lev-card"><div class="n">${pp('Importante')}</div><div class="l">Importantes</div></div>
+    <div class="lev-card"><div class="n">${pp('Deseable')}</div><div class="l">Deseables</div></div>
+  </div>
+  ${!LEVANTAMIENTO_ON?'<div class="legal-box" style="margin-bottom:14px">El modo levantamiento está <b>desactivado</b>. Actívelo en la barra lateral para habilitar el botón de comentario en cada módulo.</div>':''}
+  ${total?`<div class="box"><h3>Comentarios de esta reunión</h3>
+    <div class="table-wrap" style="border:0"><div class="tbl-scroll" style="max-height:50vh"><table>
+    <thead><tr><th>Módulo</th><th>¿Ocurre?</th><th>Prioridad</th><th>Comentario</th><th>Registrado</th></tr></thead>
+    <tbody>${COMENTARIOS.map((c,i)=>`<tr><td>${c.modulo_titulo}</td><td class="mono">${c.ocurre}</td><td><span class="prio ${c.prioridad}">${c.prioridad}</span></td><td style="white-space:normal">${c.texto}</td><td class="mono muted">${c.ts} <span style="cursor:pointer;color:#B4232C" title="Eliminar" onclick="borrarComentario(${i})">✕</span></td></tr>`).join('')}</tbody>
+    </table></div></div></div>`
+  :`<div class="soon-panel"><div class="sp-ico">${svg(IC.lev)}</div><h3>Sin comentarios aún</h3><p>Active el modo levantamiento y comente desde cualquier módulo.<br>El botón "Exportar levantamiento" arma el archivo para adjuntar a la minuta.</p></div>`}`;
+}
+
+/* ---------------------------------------------------------------------------
+   M11 · GUION DE DEMO (modo presentador)
+--------------------------------------------------------------------------- */
+const GUION=[
+  {min:'0–2',   mod:'M1', ir:'m1', mostrar:'Mostrar los 74 de brecha', decir:'El SII ya sabe quiénes iniciaron actividad en la comuna y no tienen patente. Estos son los suyos.', preguntar:'¿Sabe cuántos son en su comuna?'},
+  {min:'2–4',   mod:'M1', ir:'m1', mostrar:'Explicar el origen: archivo SII de mayo', decir:'Ese archivo llega cada mayo con la Operación Renta y casi nadie lo abre.', preguntar:'¿Quién recibe ese archivo hoy en el municipio?'},
+  {min:'4–6',   mod:'M4', ir:'m4', mostrar:'Las 9 cuotas prescritas por omisión', decir:'La acción de cobro de estas ya murió: nadie las miró a tiempo. La plata ya no es cobrable.', preguntar:'¿Cómo se entera hoy de que una cuota va a prescribir?'},
+  {min:'6–8',   mod:'M8', ir:'m8', mostrar:'Simular convenio y reinicio del reloj', decir:'Solo el convenio suscrito o la demanda notificada interrumpen. El reloj vuelve a tres años, en pantalla.', preguntar:'¿Cuántos convenios firman al año?'},
+  {min:'8–10',  mod:'M6', ir:'m6', mostrar:'Generar informe y firmar con conformidad', decir:'No hay botón "Aprobar": el funcionario manifiesta su conformidad y queda registrado con fecha y hora.', preguntar:'¿Cómo fundamenta hoy una declaración de incobrable?'},
+  {min:'10–12', mod:'M7', ir:'m7', mostrar:'Validador de plantillas de WhatsApp', decir:'Un WhatsApp no dice el monto y no interrumpe nada. Aquí está por qué, término por término.', preguntar:'¿Por qué canal avisan hoy?'},
+  {min:'Cierre',mod:'—',  ir:'',   mostrar:'El ask específico, nunca abierto', decir:'', preguntar:'¿Cargamos su archivo SII de mayo y le decimos cuántos son en su comuna?'}
+];
+let GUION_OPEN=false;
+function toggleGuion(){GUION_OPEN=!GUION_OPEN;renderGuionPanel();document.getElementById('guion-panel').classList.toggle('open',GUION_OPEN);document.getElementById('guion-fab').setAttribute('aria-expanded',String(GUION_OPEN));}
+function renderGuionPanel(){
+  document.getElementById('guion-panel').innerHTML=`
+    <h3>Guion de demo · 12 minutos</h3>
+    <div class="gp-sub">Tecla <span class="kbd">G</span> muestra/oculta · <span class="kbd">Esc</span> oculta</div>
+    ${GUION.map(g=>`<div class="gstep ${g.min==='Cierre'?'cierre':''}">
+      <span class="g-mod">${g.mod}</span><span class="g-min">${g.min}${g.min==='Cierre'?'':' min'}</span>
+      <div class="g-mostrar">${g.mostrar}</div>
+      ${g.decir?`<div class="g-decir">${g.decir}</div>`:''}
+      <div class="g-preg">${g.preguntar}</div>
+      ${g.ir?`<button class="g-go" onclick="ir('${g.ir}')">Ir al módulo →</button>`:''}
+    </div>`).join('')}`;
+}
+function vistaM11(){
+  return `
+  <div class="view-head">
+    <div><div class="eyebrow">M11 · Modo presentador</div>
+      <div class="view-title">Guion de demo</div>
+      <div class="view-sub">El guion de 12 minutos, paso a paso. Use el botón "Guion" (abajo a la derecha) o la tecla G para abrirlo sobre cualquier pantalla al proyectar; Esc lo oculta.</div></div>
+    <button class="btn btn-blue" onclick="toggleGuion()">Abrir panel del presentador</button>
+  </div>
+  <div class="box"><table>
+    <thead><tr><th>Min</th><th>Módulo</th><th>Qué mostrar</th><th>Qué decir</th><th>Pregunta al municipio</th></tr></thead>
+    <tbody>${GUION.map(g=>`<tr><td class="mono">${g.min}</td><td class="mono">${g.mod}</td><td style="white-space:normal"><b>${g.mostrar}</b></td><td class="muted" style="white-space:normal;font-size:12px">${g.decir||'—'}</td><td style="white-space:normal;color:#0A7C5A">${g.preguntar}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+/* ---------------------------------------------------------------------------
+   INDUCCIÓN · cómo funciona el sistema (ruta de aprendizaje + conceptos)
+--------------------------------------------------------------------------- */
+const INDUCCION_PASOS=[
+  {k:'m1', ir:'m1', t:'El problema que hoy nadie mira', d:'Entienda la brecha padrón–SII y el reloj de prescripción con las cuatro tarjetas de entrada. Es el punto de partida de todo.'},
+  {k:'m3', ir:'m3', t:'La cuota es la unidad, no el contribuyente', d:'La cartera se ordena por cuota y muestra primero lo que está por prescribir. Cada fila es una cuota con su propio reloj.'},
+  {k:'m4', ir:'m4', t:'El reloj y cómo se interrumpe', d:'Vea correr el plazo por cuota (art. 2521 CC) y compruebe que solo el reconocimiento o la demanda notificada lo interrumpen (art. 2518 CC).'},
+  {k:'m5', ir:'m5', t:'Actos y avisos, y las compuertas', d:'En la ficha, los actos (con efecto jurídico) y los avisos (sin efecto) van en líneas separadas. Revise las compuertas de cobranza y su base legal.'},
+  {k:'m6', ir:'m6', t:'Fundar y firmar con conformidad', d:'El informe aporta el sustrato fáctico. No hay botón “Aprobar”: usted manifiesta su conformidad por escrito y queda registrada con fecha y hora.'},
+  {k:'m2', ir:'m2', t:'Cargar y conciliar el archivo del SII', d:'Suba un CSV real o de demostración; el sistema lo concilia contra el padrón y arma el Informe de Brecha.'},
+  {k:'m7', ir:'m7', t:'Comunicar sin infringir la ley', d:'Aprenda por qué el aviso es “ciego”, y use el validador de plantillas que marca los términos prohibidos por WhatsApp.'},
+  {k:'m8', ir:'m8', t:'Rescatar cuotas con un convenio', d:'Simule un convenio y vea reiniciarse el reloj a tres años. Es la forma correcta de interrumpir la prescripción.'},
+  {k:'m9', ir:'m9', t:'Transparencia y cumplimiento', d:'Qué usa apoyo algorítmico, qué decide una persona, sobre qué base legal se trata el dato y la bitácora de auditoría.'},
+  {k:'reunion', ir:'m11', t:'Herramientas de reunión', d:'El guion del presentador (tecla G) y el modo levantamiento para capturar comentarios durante la demostración.'}
+];
+const CONCEPTOS=[
+  {tag:'Modelo', t:'La cuota, no el contribuyente', p:'La unidad atómica es la cuota. El reloj de prescripción corre por cada una, jamás consolidado por contribuyente.'},
+  {tag:'Plazo', t:'Tres años, por cuota', p:'El plazo nace del art. 2521 del Código Civil y se computa separadamente por cuota (Corte Suprema).'},
+  {tag:'Interrupción', t:'Solo dos hechos', p:'Reconocimiento de deuda (convenio o abono) o demanda notificada (art. 2518 CC). Un WhatsApp no interrumpe nada.'},
+  {tag:'Prueba', t:'Actos ≠ Avisos', p:'Los actos tienen efecto jurídico y prueban diligencia; los avisos solo informan. Nunca se mezclan.'},
+  {tag:'Criterio', t:'La decisión es humana', p:'Ningún acto se ejecuta automáticamente. La firma exige texto de conformidad; el sistema no reemplaza al funcionario.'},
+  {tag:'Guardarraíles', t:'Límites explícitos', p:'La clausura solo se propone (decide el alcalde), no se priorizan datos socioeconómicos y todo dato es exportable.'}
+];
+function cargarInduccion(){try{return JSON.parse(localStorage.getItem(NS+'induccion')||'[]');}catch(e){return [];}}
+function guardarInduccion(a){localStorage.setItem(NS+'induccion',JSON.stringify(a));}
+let IND_DONE=cargarInduccion();
+function toggleIndPaso(k){const i=IND_DONE.indexOf(k);if(i>=0)IND_DONE.splice(i,1);else{IND_DONE.push(k);logAudit('Inducción · paso completado',k);}guardarInduccion(IND_DONE);render();}
+function reiniciarInduccion(){IND_DONE=[];guardarInduccion(IND_DONE);render();}
+function vistaInduccion(){
+  const total=INDUCCION_PASOS.length, hechos=INDUCCION_PASOS.filter(p=>IND_DONE.includes(p.k)).length;
+  const pct=Math.round(hechos/total*100);
+  return `
+  <div class="view-head">
+    <div><div class="eyebrow">Inducción</div>
+      <div class="view-title">Cómo funciona MunIA Cobranza</div></div>
+    ${hechos?`<button class="btn btn-ghost" onclick="reiniciarInduccion()">Reiniciar progreso</button>`:''}
+  </div>
+
+  <div class="ind-hero">
+    <h2>En 10 pasos entiende todo el sistema</h2>
+    <p>MunIA Cobranza no cobra por usted: <b style="color:#fff">ordena los antecedentes y respeta su criterio jurídico</b>. Recorra la ruta —cada paso abre su módulo— y marque lo que ya entendió. Es un instrumento de conversación, no un producto en operación: todos los datos son de demostración.</p>
+    <div class="ind-prog"><div class="bar"><i style="width:${pct}%"></i></div><div class="lbl">${hechos}/${total} · ${pct}%</div></div>
+  </div>
+
+  <div style="margin-bottom:22px">
+    ${INDUCCION_PASOS.map((p,i)=>{const done=IND_DONE.includes(p.k);return `
+      <div class="ind-step ${done?'done':''}">
+        <div class="ind-num">${done?'✓':i+1}</div>
+        <div class="st-body">
+          <div class="st-t">${p.t}</div>
+          <div class="st-d">${p.d}</div>
+          <div class="st-actions">
+            <button class="btn btn-blue" style="padding:6px 12px;font-size:12px" onclick="ir('${p.ir}')">Abrir módulo →</button>
+            <button class="chk ${done?'on':''}" onclick="toggleIndPaso('${p.k}')">${done?'✓ Visto':'Marcar como visto'}</button>
+          </div>
+        </div>
+      </div>`;}).join('')}
+  </div>
+
+  <div class="view-head" style="margin-bottom:12px"><div><div class="view-title" style="font-size:18px">Conceptos que conviene dominar</div>
+    <div class="view-sub">Las verdades incómodas que el sistema hace visibles.</div></div></div>
+  <div class="concept-grid">
+    ${CONCEPTOS.map(c=>`<div class="concept"><h4><span class="c-tag">${c.tag}</span> ${c.t}</h4><p>${c.p}</p></div>`).join('')}
+  </div>`;
+}
+
+/* ---------------------------------------------------------------------------
+   AYUDA · preguntas frecuentes (buscables) + glosario
+--------------------------------------------------------------------------- */
+const FAQ=[
+  {cat:'Prescripción', q:'¿Por qué el reloj corre por cada cuota y no por el contribuyente?', a:'Porque la Corte Suprema ha establecido que el plazo se computa <b>separadamente por cada cuota</b>, según su fecha de exigibilidad. Consolidar por contribuyente puede hacer que cuotas antiguas prescriban sin que nadie lo note. Por eso la unidad atómica del sistema es la cuota.'},
+  {cat:'Prescripción', q:'¿Qué interrumpe la prescripción?', a:'Solo dos hechos (<b>art. 2518 del Código Civil</b>): (1) el reconocimiento de la deuda por el deudor —un convenio suscrito o un abono parcial— y (2) la demanda judicial <b>notificada</b>. Un aviso, un correo, un WhatsApp o una carta no interrumpen nada.'},
+  {cat:'Prescripción', q:'¿Cuánto dura el plazo de prescripción?', a:'Tres años. El plazo proviene del <b>art. 2521 del Código Civil</b> (acciones a favor o en contra de las municipalidades por toda clase de impuestos), contados desde que la obligación se hace exigible.'},
+  {cat:'Prescripción', q:'Una cuota ya prescribió, ¿puedo cobrarla?', a:'La acción de cobro por vía ejecutiva ya no está disponible. El sistema marca esas cuotas en <b>negro</b> para que se distingan y su destino se decida de forma documentada (por ejemplo, declararlas incobrables con fundamento).'},
+  {cat:'Actos y avisos', q:'¿Cuál es la diferencia entre un acto y un aviso?', a:'Un <b>acto</b> tiene efecto jurídico (giro, notificación, resolución, convenio, demanda), lleva folio y firma, y prueba diligencia. Un <b>aviso</b> (WhatsApp, email, SMS) solo informa. El sistema los muestra en dos líneas de tiempo separadas y nunca los mezcla.'},
+  {cat:'Actos y avisos', q:'¿Un WhatsApp interrumpe la prescripción o sirve como notificación?', a:'No. Un WhatsApp es un aviso sin efecto jurídico: no interrumpe la prescripción ni constituye notificación válida. La notificación con efecto se practica al Domicilio Digital Único (art. 46 Ley 19.880).'},
+  {cat:'Convenios', q:'¿Qué pasa cuando suscribo un convenio?', a:'Se genera un acto, se registra el reconocimiento de la deuda (art. 2518 CC) y el reloj de prescripción se <b>reinicia a tres años</b> desde la fecha del convenio. La cuota queda rescatada de la prescripción.'},
+  {cat:'Convenios', q:'¿Puedo condonar multas e intereses?', a:'La condonación tiene <b>límites legales</b> y suele requerir decreto alcaldicio conforme a la ordenanza. El simulador no condona automáticamente: proyecta el plan y registra el reconocimiento; la decisión es del municipio.'},
+  {cat:'Carga y conciliación', q:'¿Qué formato debe tener el archivo del SII (y el padrón)?', a:'CSV con encabezados en la primera fila y una columna de RUT; el sistema detecta el delimitador (; o ,) automáticamente. Hay dos plantillas descargables en el módulo de Carga: “datos-ejemplo-sii.csv” y “plantilla-padron-municipal.csv”.'},
+  {cat:'Carga y conciliación', q:'¿Cómo obtengo el informe de brecha verdadero de mi comuna?', a:'Cargue primero su <b>padrón municipal real</b> (Paso 1) y luego su <b>archivo SII real anonimizado</b> (Paso 2). La conciliación correrá contra su propio padrón —no contra el de demostración— y el Informe de Brecha mostrará los RUT con actividad en su comuna que no tienen rol de patente. Todo se procesa localmente en su navegador.'},
+  {cat:'Carga y conciliación', q:'¿Qué significan coincidencia exacta, difusa y sin coincidencia?', a:'<b>Exacta</b>: el RUT ya está en el padrón. <b>Difusa</b>: el nombre coincide con uno del padrón pero el RUT es distinto (posible homónimo o cambio de RUT — revisar). <b>Sin coincidencia</b>: el RUT no está en el padrón, es una brecha candidata a incorporar.'},
+  {cat:'Carga y conciliación', q:'¿Los datos que cargo se envían a algún servidor?', a:'No. El archivo se procesa <b>localmente</b> en su navegador; nada se envía a terceros. La única solicitud externa de la página es la carga de tipografías desde Google Fonts: no hay analítica, cookies de rastreo ni píxeles. Todo lo que genera es exportable en cualquier momento.'},
+  {cat:'Comunicaciones', q:'¿Por qué el mensaje de WhatsApp no puede decir el monto?', a:'Por tres razones: (1) la WhatsApp Business Messaging Policy de Meta prohíbe la cobranza de deudas; (2) enviar un dato financiero por un canal de un tercero extranjero es transferencia internacional (Ley 21.719); y (3) WhatsApp no es domicilio digital único ni practica notificación válida (Ley 19.880).'},
+  {cat:'Comunicaciones', q:'¿Qué es el Domicilio Digital Único?', a:'Es el domicilio electrónico al que se practica la notificación con efecto jurídico, conforme al <b>art. 46 de la Ley 19.880</b> reformado por la <b>Ley 21.180</b>. Deja constancia fehaciente de fecha y contenido.'},
+  {cat:'Cumplimiento', q:'¿Cuál es la base legal para tratar los datos de los contribuyentes?', a:'El ejercicio de funciones públicas y el cumplimiento de obligaciones legales (<b>Ley 21.719, art. 13</b>), no el consentimiento del titular. La Ley 21.719 fija su vigencia inicial el 01-12-2026 y en el Congreso se tramita su postergación a 2027; el sistema está diseñado para cumplir desde ya, rija la fecha que rija.'},
+  {cat:'Cumplimiento', q:'¿El municipio es Operador de Importancia Vital (OIV)?', a:'Los municipios están cubiertos como organismos del Estado por la Ley 21.663. La condición de OIV <b>no es automática</b>: requiere calificación por resolución de la ANCI.'},
+  {cat:'Cumplimiento', q:'¿El sistema usa datos socioeconómicos para priorizar?', a:'No. Ninguna variable de priorización usa datos socioeconómicos ni territoriales; el modelo no los contiene. Los tableros muestran carga y estado por unidad, nunca desempeño individual de funcionarios.'},
+  {cat:'Uso del sistema', q:'¿Los datos y cifras que veo son reales?', a:'No. Todos los datos son <b>sintéticos</b>, de una comuna ficticia (Villa Esperanza). La banda ámbar superior lo recuerda en todas las pantallas. Ninguna cifra corresponde a un municipio real.'},
+  {cat:'Uso del sistema', q:'¿Cómo abro el guion de la demostración?', a:'Con el botón “Guion” abajo a la derecha, o con la tecla <b>G</b> en cualquier pantalla. La tecla <b>Esc</b> lo oculta (útil al proyectar).'},
+  {cat:'Uso del sistema', q:'¿Cómo capturo comentarios durante una reunión?', a:'Active el “Modo levantamiento” en la barra lateral. Aparece un botón “Comentar este módulo” en cada pantalla. Los comentarios se consolidan en el módulo Modo levantamiento y se exportan en CSV y JSON.'},
+  {cat:'Uso del sistema', q:'¿Dónde se guarda lo que hago (convenios, firmas, comentarios)?', a:'En el almacenamiento local de su navegador (localStorage), en el mismo equipo. No se envía a ningún servidor. Puede exportar todo cuando quiera.'},
+  {cat:'Uso del sistema', q:'¿Necesito internet o instalar algo?', a:'No. Es un solo archivo HTML que funciona por doble clic y offline tras la primera carga. Solo la primera carga usa internet para las fuentes tipográficas.'}
+];
+const GLOSARIO=[
+  {t:'Cuota', d:'Unidad atómica del sistema. Cada período de patente genera una cuota con su monto, vencimiento y reloj de prescripción propios.'},
+  {t:'Rol', d:'Registro de una patente en el padrón municipal, asociado a un contribuyente.'},
+  {t:'Acto', d:'Actuación con efecto jurídico (giro, notificación, resolución, convenio, demanda). Lleva folio y firma; prueba diligencia.'},
+  {t:'Aviso', d:'Comunicación informal (WhatsApp, email, SMS) sin efecto jurídico. Informa, pero no interrumpe plazos.'},
+  {t:'Prescripción', d:'Extinción de la acción de cobro por el transcurso del tiempo (3 años, art. 2521 CC), computada por cuota.'},
+  {t:'Interrupción', d:'Hecho que reinicia el plazo: reconocimiento de deuda o demanda notificada (art. 2518 CC).'},
+  {t:'Compuerta', d:'Palanca de cobranza con base legal: renovación retenida, transferencia, cobro judicial, clausura, etc.'},
+  {t:'Capital propio', d:'Base de cálculo de la patente. Lo declara el contribuyente al SII; la municipalidad recibe la nómina hacia mayo.'},
+  {t:'Brecha', d:'RUT con actividad iniciada en la comuna (archivo SII) sin rol de patente en el padrón.'},
+  {t:'Convenio', d:'Acuerdo de pago que reconoce la deuda; genera un acto y reinicia el reloj de prescripción.'},
+  {t:'Domicilio Digital Único', d:'Domicilio electrónico para notificaciones con efecto jurídico (art. 46 Ley 19.880 / Ley 21.180).'},
+  {t:'Título ejecutivo', d:'Documento que habilita el cobro judicial; en patentes, el certificado del secretario municipal.'}
+];
+function renderFAQ(q){
+  const items=FAQ.filter(f=>!q||(f.q+' '+f.a+' '+f.cat).toLowerCase().includes(q));
+  if(!items.length)return '<div class="no-result">Sin resultados para “'+q+'”. Pruebe otra palabra o revise el glosario más abajo.</div>';
+  const cats=[];items.forEach(f=>{if(!cats.includes(f.cat))cats.push(f.cat);});
+  return cats.map(c=>`<div class="faq-cat">${c}</div>`+items.filter(f=>f.cat===c).map(f=>`<details class="faq"><summary>${f.q}</summary><div class="faq-a">${f.a}</div></details>`).join('')).join('');
+}
+function filtrarAyuda(){
+  const q=(document.getElementById('ayuda-q').value||'').toLowerCase().trim();
+  document.getElementById('ayuda-results').innerHTML=renderFAQ(q);
+}
+function vistaAyuda(){
+  return `
+  <div class="view-head">
+    <div><div class="eyebrow">Ayuda</div>
+      <div class="view-title">Centro de ayuda</div>
+      <div class="view-sub">Busque una duda o recórralas por tema. Al final, un glosario de los términos del sistema.</div></div>
+  </div>
+
+  <div class="ayuda-search">
+    <span class="s-ico"><svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></span>
+    <input type="text" id="ayuda-q" oninput="filtrarAyuda()" aria-label="Buscar en la ayuda" placeholder="Busque una duda… (p. ej. prescripción, WhatsApp, convenio)">
+  </div>
+  <div id="ayuda-results">${renderFAQ('')}</div>
+
+  <div class="view-head" style="margin:26px 0 12px"><div><div class="view-title" style="font-size:18px">Glosario</div></div></div>
+  <div class="box"><div class="glos">
+    ${GLOSARIO.map(g=>`<div class="g-item"><div class="g-term">${g.t}</div><div class="g-def">${g.d}</div></div>`).join('')}
+  </div></div>
+
+  <div class="legal-box" style="margin-top:16px">
+    ¿No encuentra su respuesta? En una implementación real, aquí va el canal de soporte del municipio.
+    <span class="cite">Este es un MVP de demostración: los datos son sintéticos y el soporte está simulado.</span>
+    <span class="cite" style="margin-top:6px">Responsable de la demo: ALTKimia SpA · contacto@munia.cl · munia.cl. La página no recopila datos personales: todo se procesa en su navegador.</span>
+  </div>`;
+}
+
+/* ===========================================================================
+   12 · EXPORTACIÓN CSV (sin librerías)
+   =========================================================================== */
+/* Descarga un archivo generado (CSV/JSON).
+   - Publicado como artifact en claude.ai: el visor bloquea las descargas por
+     blob, así que se usa la capacidad "downloads" (el visor pide confirmación).
+   - Abierto por doble clic o en un hosting propio (GitHub Pages): método blob. */
+let DL_NS;   // namespace de la capacidad, resuelto una sola vez
+async function descargar(nombre,contenido,mime){
+  try{
+    if(window.claude && typeof window.claude.use==='function'){
+      if(DL_NS===undefined) DL_NS=await window.claude.use('downloads');
+      if(DL_NS){ await DL_NS.save({filename:nombre, data:contenido}); return; }
+    }
+  }catch(e){ return; /* el visor rechazó o declinó: no hay fallback posible ahí */ }
+  const blob=new Blob([contenido],{type:mime||'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+function aCSV(headers,filas){
+  const esc=v=>{v=v==null?'':String(v);return /[",;\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  return headers.join(';')+'\n'+filas.map(f=>f.map(esc).join(';')).join('\n');
+}
+function exportarCSV(tipo){
+  if(tipo==='cartera'){
+    const rows=filasM3();
+    const csv=aCSV(['rol','contribuyente','periodo','monto','vencimiento','dias_a_prescripcion','estado','fecha_prescripcion'],
+      rows.map(c=>[c.numero_rol,c.contribuyente,c.periodo,c.monto,fmtFecha(c.fecha_vencimiento),c.dias_a_prescripcion,c.estado,fmtFecha(c.fecha_prescripcion)]));
+    descargar('cartera-por-cuota_villa-esperanza.csv',csv);
+  }else if(tipo==='brecha'){
+    const rows=DB.registrosSII.filter(r=>r.tipo==='brecha');
+    const csv=aCSV(['rut','razon_social','giro','codigo_actividad','domicilio_sii','fecha_inicio_actividades','periodo_archivo'],
+      rows.map(r=>[r.rut,r.razon_social,r.giro,r.codigo_actividad,r.domicilio_registrado,r.fecha_inicio_actividades,r.periodo]));
+    descargar('brecha-padron-sii_villa-esperanza.csv',csv);
+  }
+}
+
+/* ===========================================================================
+   13 · TECLADO (modo presentador) Y ARRANQUE
+   =========================================================================== */
+// G muestra/oculta el guion; Esc lo oculta (o cierra el modal). No dispara si
+// el foco está en un campo de texto.
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||tag==='select')return;
+  if(e.key==='g'||e.key==='G'){e.preventDefault();toggleGuion();}
+  else if(e.key==='Escape'){if(GUION_OPEN){GUION_OPEN=false;document.getElementById('guion-panel').classList.remove('open');document.getElementById('guion-fab').setAttribute('aria-expanded','false');}cerrarModal();}
+});
+pintarNav();
+render();
+</script>
+</body>
+</html>
