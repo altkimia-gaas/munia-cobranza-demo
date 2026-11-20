@@ -63,6 +63,10 @@ body{font-family:var(--sans);color:var(--ink);background:var(--abyss);font-size:
   border-bottom:1px solid #C77E00;padding:0 12px;text-align:center;
 }
 #banda-demo svg{flex:none}
+/* La banda rige solo mientras se muestran los datos sintéticos de Villa Esperanza:
+   con municipio propio configurado (o sobre la portada) se oculta. */
+body.sin-banda #banda-demo{display:none}
+body.sin-banda #app{top:0}
 
 /* ---- Layout general ---- */
 #app{position:fixed;top:26px;left:0;right:0;bottom:0;display:flex;background:var(--night)}
@@ -430,7 +434,7 @@ details.faq .faq-a b{color:var(--ink)}
 @media(max-width:1180px){.concept-grid{grid-template-columns:1fr}.glos{grid-template-columns:1fr}}
 
 /* ---- Portada (branding ALTKimia: patrón de puntos del manual sobre Abyss) ---- */
-#portada{position:fixed;top:26px;left:0;right:0;bottom:0;z-index:1600;background:var(--abyss);display:flex;flex-direction:column;overflow-y:auto;
+#portada{position:fixed;top:0;left:0;right:0;bottom:0;z-index:1600;background:var(--abyss);display:flex;flex-direction:column;overflow-y:auto;
   background-image:radial-gradient(circle,rgba(33,150,243,.14) 1px,transparent 1px);background-size:38px 38px}
 .pt-wrap{margin:auto;max-width:1060px;width:100%;padding:48px 28px 28px;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
 .pt-brandrow{display:flex;align-items:center;gap:12px;margin-bottom:26px}
@@ -2368,6 +2372,8 @@ function ptCrear(){if(MUNI){ocultarPortada();ir('m2');}else crearMunicipio();}
 function pintarMuni(){
   const chip=document.getElementById('ab-muni'),btn=document.getElementById('ab-crear'),
         tag=document.getElementById('brand-tag'),pc=document.getElementById('pt-crear');
+  // Banda de demostración: solo mientras rige el municipio de prueba (datos sintéticos)
+  document.body.classList.toggle('sin-banda',!!MUNI);
   if(MUNI){
     chip.innerHTML='<span class="dotm"></span>Municipio: '+MUNI.comuna+(MUNI.region?' ('+MUNI.region+')':'')+' · Admin: '+MUNI.admin_nombre;
     chip.classList.add('propio');
